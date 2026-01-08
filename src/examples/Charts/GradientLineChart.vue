@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted } from "vue";
+import { onBeforeUnmount, onMounted, watch } from "vue";
 import Chart from "chart.js/auto";
 
 const props = defineProps({
@@ -31,8 +31,13 @@ const props = defineProps({
   },
 });
 
-onMounted(() => {
-  var gradientLineChart = document.getElementById(props.id).getContext("2d");
+let chartInstance;
+
+const buildChart = () => {
+  const canvas = document.getElementById(props.id);
+  if (!canvas) return;
+
+  var gradientLineChart = canvas.getContext("2d");
 
   var gradientStroke1 = gradientLineChart.createLinearGradient(0, 230, 0, 50);
 
@@ -46,12 +51,12 @@ onMounted(() => {
   gradientStroke2.addColorStop(0.2, "rgba(72,72,176,0.0)");
   gradientStroke2.addColorStop(0, "rgba(20,23,39,0)"); //purple colors
 
-  let chartStatus = Chart.getChart(props.id);
-  if (chartStatus != undefined) {
-    chartStatus.destroy();
+  if (chartInstance) {
+    chartInstance.destroy();
+    chartInstance = undefined;
   }
   if (props.chart.datasets.length == 2) {
-    new Chart(gradientLineChart, {
+    chartInstance = new Chart(gradientLineChart, {
       type: "line",
       data: {
         labels: props.chart.labels,
@@ -141,7 +146,7 @@ onMounted(() => {
       },
     });
   } else if (props.chart.datasets.length == 1) {
-    new Chart(gradientLineChart, {
+    chartInstance = new Chart(gradientLineChart, {
       type: "line",
       data: {
         labels: props.chart.labels,
@@ -217,6 +222,20 @@ onMounted(() => {
         },
       },
     });
+  }
+};
+
+onMounted(buildChart);
+watch(
+  () => props.chart,
+  () => buildChart(),
+  { deep: true }
+);
+
+onBeforeUnmount(() => {
+  if (chartInstance) {
+    chartInstance.destroy();
+    chartInstance = undefined;
   }
 });
 </script>

@@ -13,7 +13,7 @@ Coded by www.creative-tim.com
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 -->
 <script setup>
-import { computed } from "vue";
+import { computed, watch, onMounted } from "vue";
 import { useStore } from "vuex";
 import Sidenav from "./examples/Sidenav";
 import Configurator from "@/examples/Configurator.vue";
@@ -42,6 +42,16 @@ const navClasses = computed(() => {
     "px-0 mx-4": !isAbsolute.value,
   };
 });
+
+onMounted(() => {
+  // aplica o tema correto no primeiro load
+  document.body.classList.toggle("dark-version", darkMode.value);
+});
+
+watch(darkMode, (val) => {
+  document.body.classList.toggle("dark-version", val);
+});
+
 </script>
 <template>
   <div

@@ -11,6 +11,10 @@ import ArgonButton from "@/components/ArgonButton.vue";
 const body = document.getElementsByTagName("body")[0];
 
 const store = useStore();
+const token = localStorage.getItem("token");
+
+console.log(token)
+
 
 onMounted(() => {
   store.state.isAbsolute = true;
@@ -120,7 +124,7 @@ onBeforeUnmount(() => {
                             </g>
                           </g>
                         </g>
-                      </svg>
+                      </svg>  
                       <span class="ms-1">App</span>
                     </a>
                   </li>

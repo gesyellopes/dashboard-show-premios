@@ -8,14 +8,18 @@ import Profile from "../views/Profile.vue";
 import Signup from "../views/Signup.vue";
 import Signin from "../views/Signin.vue";
 
+//Componentes
+import Tickets from "../views/Cartelas.vue";
+import Vendors from "../views/Vendors.vue";
+
 const routes = [
   {
     path: "/",
     name: "/",
-    redirect: "/dashboard-default",
+    redirect: "/dashboard",
   },
   {
-    path: "/dashboard-default",
+    path: "/dashboard",
     name: "Dashboard",
     component: Dashboard,
   },
@@ -54,6 +58,26 @@ const routes = [
     name: "Signup",
     component: Signup,
   },
+  {
+    path: "/tickets",
+    name: "Cartelas",
+    component: Tickets
+  },
+  {
+    path: "/vendors",
+    name: "Vendedores",
+    component: Vendors
+  },
+  {
+    path: "/logout",
+    name: "Logout",
+    beforeEnter: (to, from, next) => {
+      const store = require("@/store").default;
+      store.commit("clearAuth");
+      next("/signin");
+    },
+  }
+
 ];
 
 const router = createRouter({

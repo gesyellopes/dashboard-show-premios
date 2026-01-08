@@ -5,10 +5,10 @@ export default createStore({
     hideConfigButton: false,
     isPinned: false,
     showConfig: false,
-    sidebarType: "bg-white",
+    sidebarType: "bg-default",
     isRTL: false,
     mcolor: "",
-    darkMode: false,
+    darkMode: true,
     isNavFixed: false,
     isAbsolute: false,
     showNavs: true,
@@ -17,6 +17,10 @@ export default createStore({
     showFooter: true,
     showMain: true,
     layout: "default",
+    auth: {
+      token: localStorage.getItem("token") || null,
+      user: JSON.parse(localStorage.getItem("user") || "null"),
+    }
   },
   mutations: {
     toggleConfigurator(state) {
@@ -43,6 +47,24 @@ export default createStore({
       } else {
         state.isNavFixed = false;
       }
+    },
+    setAuth(state, { token, user, remember }) {
+      state.auth = { token, user };
+
+      if (remember) {
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
+      } else {
+        sessionStorage.setItem("token", token);
+        sessionStorage.setItem("user", JSON.stringify(user));
+      }
+    },
+    clearAuth(state) {
+      state.auth = { token: null, user: null };
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("user");
     },
   },
   actions: {

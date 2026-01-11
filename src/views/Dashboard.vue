@@ -15,6 +15,7 @@ const kpis = ref({
   total_tickets: 0,
   total_validated_tickets: 0,
   total_fianncial: 0,
+  verifiedPercent: 0,
 });
 
 const formatCurrency = (value) =>
@@ -28,13 +29,26 @@ const kpiValues = computed(() => ({
   totalValidatedTickets: kpis.value.total_validated_tickets,
   totalVendors: kpis.value.total_vendors,
   totalFinancial: formatCurrency(kpis.value.total_fianncial),
+  verifiedPercent: kpis.value.verifiedPercent
 }));
 
 const loadKpis = async () => {
   kpisLoading.value = true;
   try {
     const { data } = await api.get("/report/kpis");
-    if (data) kpis.value = data;
+    
+    if(data){
+      Object.assign(kpis.value, data);
+    }
+
+    kpis.value.verifiedPercent = kpis.value.total_tickets
+      ? (
+          (kpis.value.total_validated_tickets / kpis.value.total_tickets) *
+          100
+        ).toFixed(2)
+      : "0.00";
+
+      console.log("Loaded KPIs:", kpis.value);
   } catch (error) {
     console.error("Failed to load KPIs", error);
   } finally {
@@ -61,6 +75,9 @@ const loadFinancialReport = async () => {
         unit: item?.name ?? "",
         tickets: item?.tickets?.total ?? 0,
         verified: item?.tickets?.verified ?? 0,
+        verifiedPercent: item?.tickets?.total
+          ? ((item.tickets.verified / item.tickets.total) * 100).toFixed(2)
+          : "0.00",
         vendors: Array.isArray(item?.vendedores)
           ? item.vendedores.length
           : item?.vendedores ?? 0,
@@ -101,7 +118,7 @@ onMounted(() => {
             }" />
           </div>
           <div class="col-lg-3 col-md-6 col-12">
-            <mini-statistics-card title="Cartelas Verificadas" :value="{ text: kpiValues.totalValidatedTickets }"
+            <mini-statistics-card title="Cartelas Verificadas" :value="{ text: kpiValues.totalValidatedTickets + ' | ' + kpiValues.verifiedPercent + '%' }"
               :loading="kpisLoading" description="" :icon="{
               component: 'ni ni-check-bold',
               background: 'bg-gradient-danger',
@@ -162,7 +179,7 @@ onMounted(() => {
                         <td>
                           <div class="text-center">
                             <p class="mb-0 text-xs font-weight-bold">Verificadas</p>
-                            <h6 class="mb-0 text-sm">{{ sale.verified }}</h6>
+                            <h6 class="mb-0 text-sm">{{ sale.verified }} | {{ sale.verifiedPercent }}% </h6>
                           </div>
                         </td>
                         <td class="text-sm align-middle">

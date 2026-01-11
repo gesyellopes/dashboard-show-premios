@@ -6,7 +6,6 @@ import "datatables.net-bs5/css/dataTables.bootstrap5.min.css";
 
 import api from "@/services/api";
 import Swal from "sweetalert2";
-import { classes } from "@vueform/vueform/dist/bootstrap";
 
 // registra o core (obrigatório)
 DataTable.use(DataTablesCore);

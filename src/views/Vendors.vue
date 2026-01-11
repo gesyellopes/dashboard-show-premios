@@ -6,6 +6,7 @@ import "datatables.net-bs5/css/dataTables.bootstrap5.min.css";
 
 import api from "@/services/api";
 import Swal from "sweetalert2";
+import { classes } from "@vueform/vueform/dist/bootstrap";
 
 // registra o core (obrigatório)
 DataTable.use(DataTablesCore);
@@ -27,11 +28,51 @@ const closeModal = () => {
 
 // ===== DataTables refs/options =====
 const dtRef = ref(null);
+const filterForm = ref(null);
+const filters = ref({});
+const groupOptions = ref([]);
+const groupLoading = ref(false);
 
 function reloadTable() {
     const dt = dtRef.value?.dt;
     if (dt) dt.ajax.reload(null, false); // false = mantém página
 }
+
+function setTableLoading(isLoading) {
+    const dt = dtRef.value?.dt;
+    if (dt) dt.processing(isLoading);
+}
+
+const resetGroupFilter = () => {
+    groupOptions.value = [];
+    const form = filterForm.value;
+    if (form?.el$) {
+        form.el$("group_id_search")?.update(null);
+    }
+};
+
+const handleUnitFilterChange = async (value) => {
+    const unitId = value?.value ?? value;
+    if (!unitId) {
+        resetGroupFilter();
+        return;
+    }
+
+    groupLoading.value = true;
+    resetGroupFilter();
+    try {
+        const { data } = await api.get(`/groups/by-unit/${unitId}`);
+        const groups = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
+        groupOptions.value = groups.map((group) => ({
+            value: group.id,
+            label: group.name,
+        }));
+    } catch (error) {
+        console.error("Failed to load groups by unit", error);
+    } finally {
+        groupLoading.value = false;
+    }
+};
 
 function formatBrWhatsapp(value) {
     if (!value) return "-";
@@ -96,13 +137,12 @@ const columns = [
 const options = {
     processing: true,
     serverSide: true,
-    searching: true,
+    searching: false,
     lengthChange: false,
     pageLength: 20,
     ordering: false,
     responsive: true,
     stateSave: false,   // não salva estado na URL/storage
-    searchDelay: 400,   // debounce do search (reduz spam)
 };
 
 const showEditModal = ref(false)
@@ -171,20 +211,22 @@ async function ajaxVendors(dtRequest, callback) {
     try {
         const length = dtRequest.length || 20;
         const page = Math.floor((dtRequest.start || 0) / length) + 1;
-        const q = (dtRequest.search?.value || "").trim();
-
-        const endpoint = q ? "/vendors/search" : "/vendors";
+        const endpoint = "/vendors";
+        const rawFilters = filters.value || {};
+        const params = Object.keys(rawFilters).reduce((acc, key) => {
+            const value = rawFilters[key];
+            if (value === null || value === undefined || value === "") return acc;
+            acc[key] = value;
+            return acc;
+        }, {});
 
         const { data } = await api.get(endpoint, {
             params: {
                 page,
                 limit: length,
-                ...(q ? { q } : {}),
+                ...params,
             },
         });
-
-        console.log(data)
-
         const meta = data?.meta || {};
         const rows = data?.data || [];
 
@@ -204,6 +246,20 @@ async function ajaxVendors(dtRequest, callback) {
         });
     }
 }
+
+const handleFilter = (form$) => {
+    filters.value = { ...form$.requestData };
+    setTableLoading(true);
+    reloadTable();
+};
+
+const handleResetFilters = () => {
+    filters.value = {};
+    if (filterForm.value) filterForm.value.reset();
+    resetGroupFilter();
+    setTableLoading(true);
+    reloadTable();
+};
 
 // submit
 const handleSubmit = async (form$) => {
@@ -273,9 +329,61 @@ onMounted(loadUnits);
                                 <h6 class="mb-0">Vendedores</h6>
                             </div>
                             <div class="col-6 text-end">
-                                <button class="btn bg-gradient-dark mb-0" type="button" @click="openModal">
+                                <button class="btn text-white bg-success mb-0" type="button" @click="openModal">
                                     <i class="fas fa-plus"></i>&nbsp;&nbsp;Adicionar Vendedor
                                 </button>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <Vueform ref="filterForm" :endpoint="false" @submit="handleFilter">
+                                    <GroupElement name="container4" :columns="{
+                                    container: 10,
+                                }">
+                                        <GroupElement name="column1" :columns="{
+                                    container: 3,
+                                }">
+                                            <TextElement name="vendor_name" label="Nome Vendedor" />
+                                        </GroupElement>
+                                        <GroupElement name="column2" :columns="{
+                                    container: 3,
+                                }">
+                                            <TextElement name="vendor_whatsapp" label="Whatsapp Vendedor"
+                                                :mask="('(00) 00000-0000')" />
+                                        </GroupElement>
+
+                                        <GroupElement name="column3" :columns="{ container: 3 }">
+                                            <SelectElement name="unit_id_search" :items="unitOptions" :search="true"
+                                                :native="false" label="Comunidade" input-type="search"
+                                                autocomplete="off" @change="handleUnitFilterChange" />
+                                        </GroupElement>
+
+                                        <GroupElement name="column4" :columns="{
+                                    container: 3,
+                                }">
+                                            <SelectElement name="group_id_search" :items="groupOptions" :search="true"
+                                                :native="false" label="Paróquia" input-type="search" autocomplete="off"
+                                                :disabled="groupLoading || groupOptions.length === 0" />
+                                        </GroupElement>
+                                    </GroupElement>
+                                    <GroupElement name="column5" :columns="{ container: 2 }">
+
+                                        <GroupElement name="column6" :columns="{ container: 6 }">
+
+                                            <ButtonElement name="submit" button-label="<i class='fas fa-search'></i>"
+                                                :submits="true" :add-class="'mt-4 pt-2'" />
+
+                                        </GroupElement>
+
+                                        <GroupElement name="column6" :columns="{ container: 6 }">
+
+                                            <ButtonElement name="reset" button-label="<i class='fas fa-undo'></i>"
+                                                :submits="false" secondary @click="handleResetFilters" :add-class="'mt-4 pt-2'" />
+
+                                        </GroupElement>
+
+                                    </GroupElement>
+                                </Vueform>
                             </div>
                         </div>
                     </div>
@@ -365,7 +473,8 @@ onMounted(loadUnits);
 
                                 <GroupElement name="container2_3">
                                     <GroupElement name="column1" :columns="{ container: 6 }">
-                                        <TextElement name="vendor_name" label="Nome do Vendedor" :rules="['required']" />
+                                        <TextElement name="vendor_name" label="Nome do Vendedor"
+                                            :rules="['required']" />
                                     </GroupElement>
 
                                     <GroupElement name="column2" :columns="{ container: 6 }">
@@ -392,14 +501,13 @@ onMounted(loadUnits);
 
                                 <GroupElement name="container2">
                                     <GroupElement name="column1" :columns="{ container: 6 }">
-                                        <TextElement name="ticket_from" input-type="text"
-                                            :rules="['required']" autocomplete="off"
-                                            label="Cartela Inicial" mask="000000" />
+                                        <TextElement name="ticket_from" input-type="text" :rules="['required']"
+                                            autocomplete="off" label="Cartela Inicial" mask="000000" />
                                     </GroupElement>
 
                                     <GroupElement name="column2" :columns="{ container: 6 }">
-                                        <TextElement name="ticket_to" input-type="text"
-                                            :rules="['required']" autocomplete="off" label="Cartela Final" mask="000000" />
+                                        <TextElement name="ticket_to" input-type="text" :rules="['required']"
+                                            autocomplete="off" label="Cartela Final" mask="000000" />
                                     </GroupElement>
                                 </GroupElement>
 

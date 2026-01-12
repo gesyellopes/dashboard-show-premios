@@ -10,7 +10,8 @@ import Signin from "../views/Signin.vue";
 
 //Componentes
 import Tickets from "../views/Cartelas.vue";
-import Vendors from "../views/Vendors.vue";
+import Vendors from "../views/vendors/Vendors.vue";
+import VendorDetails from "../views/vendors/VendorDetails.vue";
 
 const routes = [
   {
@@ -67,6 +68,12 @@ const routes = [
     path: "/vendors",
     name: "Vendedores",
     component: Vendors
+  },
+  {
+    path: "/vendors/:id",
+    name: "VendorDetails",
+    component: VendorDetails,
+    props: true
   },
   {
     path: "/logout",

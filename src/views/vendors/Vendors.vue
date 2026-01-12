@@ -4,6 +4,12 @@ import DataTable from "datatables.net-vue3";
 import DataTablesCore from "datatables.net-bs5";
 import "datatables.net-bs5/css/dataTables.bootstrap5.min.css";
 
+import router from "@/router";
+
+//Modals
+import VendorCreateModal from "./modals/VendorCreateModal.vue";
+import VendorEditModal from "./modals/VendorEditModal.vue";
+
 import api from "@/services/api";
 import Swal from "sweetalert2";
 
@@ -31,6 +37,12 @@ const filterForm = ref(null);
 const filters = ref({});
 const groupOptions = ref([]);
 const groupLoading = ref(false);
+
+function goToVendor(id) {
+    const url = router.resolve({ name: "VendorDetails", params: { id } });
+    window.open(url.href, "_blank"); 
+}
+
 
 function reloadTable() {
     const dt = dtRef.value?.dt;
@@ -114,6 +126,18 @@ const columns = [
         title: "Comunidade",
         name: "unit",
         defaultContent: "-",
+    },
+    {
+        data: "tickets_total",
+        title: "Cartelas",
+        name: "tickets_total",
+        defaultContent: "0",
+    },
+    {
+        data: "tickets_verified",
+        title: "Verificadas",
+        name: "tickets_verified",
+        defaultContent: "0",
     },
     {
         data: "group",
@@ -228,6 +252,8 @@ async function ajaxVendors(dtRequest, callback) {
         });
         const meta = data?.meta || {};
         const rows = data?.data || [];
+
+        console.log(data)
 
         callback({
             draw: dtRequest.draw,
@@ -377,7 +403,8 @@ onMounted(loadUnits);
                                         <GroupElement name="column6" :columns="{ container: 6 }">
 
                                             <ButtonElement name="reset" button-label="<i class='fas fa-undo'></i>"
-                                                :submits="false" secondary @click="handleResetFilters" :add-class="'mt-4 pt-2'" />
+                                                :submits="false" secondary @click="handleResetFilters"
+                                                :add-class="'mt-4 pt-2'" />
 
                                         </GroupElement>
 
@@ -394,7 +421,10 @@ onMounted(loadUnits);
                             :columns="columns" :options="options" :ajax="ajaxVendors">
                             <!-- slot pro nome virar link -->
                             <template #nameCell="props">
-                                {{ props.cellData }}
+                                <a href="#" class="text-decoration-none fw-bold"
+                                    @click.prevent="goToVendor(props.rowData.id)">
+                                    {{ props.cellData }}
+                                </a>
                             </template>
 
                             <template #actionsCell="props">
@@ -416,109 +446,17 @@ onMounted(loadUnits);
             </div>
         </div>
 
-        <!-- MODAL EDIT -->
-        <div v-if="showEditModal" class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
-            <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-                <div class="modal-content bg-default">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Editar Vendedor</h5>
-                        <button type="button" class="btn-close" aria-label="Close" @click="closeEditModal"></button>
-                    </div>
+        <!-- Modais -->
+        <VendorEditModal
+            v-model="showEditModal"
+            :vendor="editingVendor"
+            :unitOptions="unitOptions"
+            @close="closeEditModal"
+            @reload-parent="reloadTable"
+        />
 
-                    <div class="modal-body">
-                        <div class="p-3">
-                            <p class="mb-2"><strong>ID:</strong> {{ editingVendor?.id }}</p>
-                            <p class="mb-2"><strong>Nome:</strong> {{ editingVendor?.name }}</p>
-                            <p class="mb-2"><strong>WhatsApp:</strong> {{ editingVendor?.whatsapp }}</p>
-                            <p class="mb-0 text-secondary">Aqui você coloca o Vueform de edição depois.</p>
-                        </div>
-                    </div>
+        <VendorCreateModal v-model="showModal" :unitOptions="unitOptions" :submitLoading="submitLoading"
+            @submit="handleSubmit" @close="closeModal" />
 
-                    <div class="modal-footer">
-                        <button class="btn btn-outline-dark mb-0" type="button" @click="closeEditModal">
-                            Fechar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div v-if="showEditModal" class="modal-backdrop fade show"></div>
-
-
-        <!-- MODAL -->
-        <div v-if="showModal" class="modal fade show d-block" tabindex="-1" role="dialog" aria-modal="true">
-            <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-                <div class="modal-content bg-default">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Cadastrar Vendedores</h5>
-                        <button type="button" class="btn-close" aria-label="Close" @click="closeModal"></button>
-                    </div>
-
-                    <div class="modal-body">
-                        <div class="vf-scope p-3">
-                            <Vueform ref="vendorForm" :endpoint="false" @submit="handleSubmit">
-                                <GroupElement name="container2_2">
-                                    <GroupElement name="column1" :columns="{ container: 6 }">
-                                        <SelectElement name="unit_id" :items="unitOptions" :search="true"
-                                            :native="false" label="Comunidade" input-type="search" autocomplete="off"
-                                            :rules="['required']" />
-                                    </GroupElement>
-
-                                    <GroupElement name="column2" :columns="{ container: 6 }">
-                                        <TextElement name="group_name" label="Paróquia" :rules="['required']" />
-                                    </GroupElement>
-                                </GroupElement>
-
-                                <GroupElement name="container2_3">
-                                    <GroupElement name="column1" :columns="{ container: 6 }">
-                                        <TextElement name="vendor_name" label="Nome do Vendedor"
-                                            :rules="['required']" />
-                                    </GroupElement>
-
-                                    <GroupElement name="column2" :columns="{ container: 6 }">
-                                        <TextElement name="vendor_whatsapp" label="Whatsapp Vendedor" input-type="text"
-                                            mask="(00) 0 0000-0000" :rules="['required']" />
-                                    </GroupElement>
-                                </GroupElement>
-
-                                <StaticElement name="h4" tag="h4" content="Cartelas" />
-                                <StaticElement name="p" tag="p"
-                                    content="<div>Indique o intervalo das cartelas entregues ao vendedor. <br>Exemplo: Se passou as cartelas de <strong>000001 </strong>até a cartela <strong>000100 </strong>indique no campo abaixo:</div>" />
-
-                                <GroupElement name="container2_1">
-                                    <GroupElement name="column1" :columns="{ container: 6 }">
-                                        <StaticElement name="p_1" tag="p"
-                                            content="<div><strong>Cartela Inicial:</strong> 000001</div>" />
-                                    </GroupElement>
-
-                                    <GroupElement name="column2" :columns="{ container: 6 }">
-                                        <StaticElement name="p_2" tag="p"
-                                            content="<div><strong>Cartela Final:</strong> 000100</div>" />
-                                    </GroupElement>
-                                </GroupElement>
-
-                                <GroupElement name="container2">
-                                    <GroupElement name="column1" :columns="{ container: 6 }">
-                                        <TextElement name="ticket_from" input-type="text" :rules="['required']"
-                                            autocomplete="off" label="Cartela Inicial" mask="000000" />
-                                    </GroupElement>
-
-                                    <GroupElement name="column2" :columns="{ container: 6 }">
-                                        <TextElement name="ticket_to" input-type="text" :rules="['required']"
-                                            autocomplete="off" label="Cartela Final" mask="000000" />
-                                    </GroupElement>
-                                </GroupElement>
-
-                                <ButtonElement name="submit" button-label="Cadastrar Vendedor" :submits="true" size="lg"
-                                    align="center" :full="true" :loading="submitLoading" />
-                            </Vueform>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div v-if="showModal" class="modal-backdrop fade show"></div>
     </div>
 </template>

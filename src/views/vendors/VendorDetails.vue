@@ -4,7 +4,6 @@ import { useStore } from "vuex";
 
 import setNavPills from "@/assets/js/nav-pills.js";
 import setTooltip from "@/assets/js/tooltip.js";
-import ProfileCard from "../components/ProfileCard.vue";
 import ArgonInput from "@/components/ArgonInput.vue";
 import ArgonButton from "@/components/ArgonButton.vue";
 
@@ -41,7 +40,7 @@ onBeforeUnmount(() => {
   <main>
     <div class="container-fluid">
       <div
-        class="page-header min-height-300"
+        class="page-header min-height-100"
         style="
           background-image: url(&quot;https://images.unsplash.com/photo-1531512073830-ba890ca4eba2?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&auto=format&fit=crop&w=1920&q=80&quot;);
           margin-right: -24px;
@@ -238,7 +237,7 @@ onBeforeUnmount(() => {
     </div>
     <div class="py-4 container-fluid">
       <div class="row">
-        <div class="col-md-8">
+        <div class="col-md-12">
           <div class="card">
             <div class="card-header pb-0">
               <div class="d-flex align-items-center">
@@ -322,9 +321,6 @@ onBeforeUnmount(() => {
               </div>
             </div>
           </div>
-        </div>
-        <div class="col-md-4">
-          <profile-card />
         </div>
       </div>
     </div>

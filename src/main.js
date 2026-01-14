@@ -14,9 +14,12 @@ import { DataTable } from "datatables.net-vue3";
 import DataTablesCore from "datatables.net-bs5";
 DataTable.use(DataTablesCore);
 
+
+/*
 DataTablesCore.defaults.language = {
     url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/pt-BR.json"
 };
+*/
 
 import "datatables.net-bs5/css/dataTables.bootstrap5.min.css";
 

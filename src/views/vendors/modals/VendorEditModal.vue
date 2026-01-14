@@ -79,6 +79,7 @@ const reloadRangeTable = () => {
   const dt = rangeDtRef.value?.dt;
   if (dt) dt.ajax.reload();
   emit("reload-parent");
+  fetchTickets()
 };
 
 function ajaxRanges(dtRequest, callback) {
@@ -170,6 +171,45 @@ const requestTicketRegistration = async (vendorId) => {
   }
 }
 
+// ===== Tickets (view estilo "retângulos") =====
+const tickets = ref([])
+const ticketsLoading = ref(false)
+
+const fetchTickets = async () => {
+  const vendorId = props.vendor?.id
+  if (!vendorId) {
+    tickets.value = []
+    return
+  }
+
+  ticketsLoading.value = true
+  try {
+    const { data } = await api.get(`/vendors/${vendorId}/tickets`)
+    tickets.value = Array.isArray(data) ? data : []
+  } catch (e) {
+    console.error("fetchTickets error:", e)
+    tickets.value = []
+  } finally {
+    ticketsLoading.value = false
+  }
+}
+
+// 10 por linha (chunks)
+const ticketRows = computed(() => {
+  const list = tickets.value ?? []
+  const rows = []
+  for (let i = 0; i < list.length; i += 10) rows.push(list.slice(i, i + 10))
+  return rows
+})
+
+// prioridade: paid > validated > warning
+const ticketClass = (t) => {
+  if (Number(t?.paid) === 1) return "bg-success text-white"
+  if (Number(t?.validated) === 1) return "bg-info text-white"
+  return "bg-warning text-dark"
+}
+
+
 // ===== Modal: Add Range =====
 const showAddRangeModal = ref(false);
 const addRangeLoading = ref(false);
@@ -222,7 +262,9 @@ function close() {
 watch(
   () => [props.vendor?.id, isOpen.value],
   ([vendorId, open]) => {
-    if (vendorId && open) reloadRangeTable();
+    if (vendorId && open)
+      reloadRangeTable()
+    fetchTickets()
   }
 );
 
@@ -273,6 +315,24 @@ watch(
 
     <DataTable ref="rangeDtRef" class="table table-striped table-hover align-items-center mb-0" :columns="rangeColumns"
       :options="rangeOptions" :ajax="ajaxRanges" />
+
+    <div class="px-3 mt-3">
+      <div v-if="ticketsLoading" class="text-muted small">Carregando cartelas...</div>
+
+      <div v-else-if="!tickets?.length" class="text-muted small">
+        Nenhuma cartela encontrada para este vendedor.
+      </div>
+
+      <div class="tickets-wrap">
+        <div v-for="(row, rIdx) in ticketRows" :key="`row-${rIdx}`" class="tickets-grid mb-2">
+          <div v-for="t in row" :key="t.id" class="ticket-box fw-bold" :class="ticketClass(t)">
+            {{ t.ticket_number }}
+          </div>
+        </div>
+      </div>
+
+
+    </div>
 
     <!-- ===== MODAL: ADD RANGE ===== -->
     <BaseModal v-model="showAddRangeModal" title="Adicionar Range" size="lg" contentClass="bg-default"
@@ -339,3 +399,43 @@ watch(
     </template>
   </BaseModal>
 </template>
+
+
+<style>
+/* wrapper que segura dentro do modal */
+.tickets-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  /* se faltar espaço, rola ao invés de vazar */
+  overflow-y: hidden;
+  padding-bottom: 6px;
+  /* espaço pro scroll não colar nos blocos */
+}
+
+/* grid fixo com 10 colunas, mas SEM estourar o container */
+.tickets-grid {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  /* minmax(0) evita overflow */
+  gap: 8px;
+  width: 100%;
+}
+
+/* blocos não podem forçar largura */
+.ticket-box {
+  height: 42px;
+  min-width: 0;
+  /* importante */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  border-radius: 6px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.5px;
+  user-select: none;
+}
+</style>

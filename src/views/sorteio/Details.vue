@@ -3,6 +3,9 @@ import { ref, onMounted } from "vue";
 import DataTable from "datatables.net-vue3";
 import DataTablesCore from "datatables.net-bs5";
 import "datatables.net-bs5/css/dataTables.bootstrap5.min.css";
+import { useRoute } from "vue-router";
+const route = useRoute();
+const id = route.params.id;
 
 import api from "@/services/api";
 import BaseModal from "@/views/components/BaseModal.vue"; // ajuste se seu path for outro
@@ -26,7 +29,6 @@ function setTableLoading(isLoading) {
 const showMirrorModal = ref(false);
 const mirrorUrl = ref("");
 const mirrorTicketNumber = ref("");
-const mirrorTicketValidatedDate = ref("");
 const mirrorLoadError = ref(false);
 
 const STORAGE_BASE = "https://storage.showdepremios.cloud/file/";
@@ -36,8 +38,6 @@ function openMirrorModal(row) {
 
   mirrorLoadError.value = false;
   mirrorTicketNumber.value = row.ticketNumber ?? "";
-
-  mirrorTicketValidatedDate.value = row.validatedOn ?? "";
 
   const filename = encodeURIComponent(String(row.mirror).trim());
   mirrorUrl.value = `${STORAGE_BASE}${filename}`;
@@ -54,13 +54,10 @@ function closeMirrorModal() {
 }
 
 // ===== Filters (Vueform) =====
-const filterForm = ref(null);
 const filters = ref({});
 
 // options combos
 const unitOptions = ref([]);
-const groupOptions = ref([]);
-const groupLoading = ref(false);
 
 // carrega comunidades
 const loadUnits = async () => {
@@ -76,120 +73,96 @@ const loadUnits = async () => {
   }
 };
 
-// reseta combo de paróquia
-const resetGroupFilter = () => {
-  groupOptions.value = [];
-  const form = filterForm.value;
-  if (form?.el$) {
-    form.el$("group_id")?.update(null);
-  }
-};
-
-// mesma lógica do vendors: ao selecionar unidade, busca grupos
-const handleUnitFilterChange = async (value) => {
-  const unitId = value?.value ?? value;
-
-  if (!unitId) {
-    resetGroupFilter();
-    return;
-  }
-
-  groupLoading.value = true;
-  resetGroupFilter();
-
-  try {
-    const { data } = await api.get(`/groups/by-unit/${unitId}`);
-    const groups = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
-    groupOptions.value = groups.map((g) => ({
-      value: g.id,
-      label: g.name,
-    }));
-  } catch (error) {
-    console.error("Failed to load groups by unit", error);
-  } finally {
-    groupLoading.value = false;
-  }
-};
-
-const handleFilter = (form$) => {
-  filters.value = { ...form$.requestData };
-  setTableLoading(true);
-  reloadTable();
-};
-
-const handleResetFilters = () => {
-  filters.value = {};
-  if (filterForm.value) filterForm.value.reset();
-  resetGroupFilter();
-  setTableLoading(true);
-  reloadTable();
-};
-
 // ===== Columns =====
 const columns = [
-  { data: "ticketNumber", title: "Cartela", name: "ticketNumber" },
-
   {
     data: null,
-    title: "Comunidade",
-    name: "unit",
+    title: "Ordem",
+    name: "raffle_order",
     defaultContent: "-",
-    render: (_d, _t, row) => row?.unit?.name ?? "-",
+    render: (_d, _t, row) => row?.roundNumber ?? "-",
   },
   {
     data: null,
-    title: "Paróquia",
-    name: "group",
+    title: "Descrição",
+    name: "description",
     defaultContent: "-",
-    render: (_d, _t, row) => row?.group?.name ?? "-",
+    render: (_d, _t, row) => row?.description ?? "-",
   },
   {
     data: null,
-    title: "Vendedor",
-    name: "vendor",
+    title: "Prêmio",
+    name: "prize",
     defaultContent: "-",
-    render: (_d, _t, row) => row?.vendor?.name ?? "-",
+    render: (_d, _t, row) => row?.prize ?? "-",
   },
-
-  // ✅ Validada clicável (só se "Sim" e tiver mirror)
   {
-    data: "validated",
-    title: "Validada",
-    name: "validated",
-    orderable: false,
-    render: (_val, _type, row) => {
-      const ok = Number(row?.validated) === 1;
-
-      if (!ok) {
-        return `<span class="badge bg-secondary">Não</span>`;
+    data: null,
+    title: "Data de Início",
+    name: "start_at",
+    defaultContent: "-",
+    render: (_d, _t, row) => {
+      if (!row?.startAt) return "-";
+      const date = new Date(row.startAt);
+      return date.toLocaleString();
+    },
+  },
+  {
+    data: null,
+    title: "Data de Término",
+    name: "end_at",
+    defaultContent: "-",
+    render: (_d, _t, row) => {
+      if (!row?.decidedAt) return "-";
+      const date = new Date(row.decidedAt);
+      return date.toLocaleString();
+    },
+  },
+  {
+    data: null,
+    title: "Status",
+    name: "status",
+    defaultContent: "-",
+    render: (_d, _t, row) => {
+      if (!row?.status) return "-";
+      if (row.status === 'scheduled') return 'Agendado';
+      if (row.status === 'running') return 'Em Andamento';
+      if (row.status === 'closed') return 'Encerrado';
+      return row.status;
+    },
+    //Se o status for 'scheduled', mostrar 'Agendado'
+    //Se o status for 'running', mostrar 'Em Andamento'
+    //Se o status for 'closed', mostrar 'Encerrado'
+  },
+  {
+    data: null,
+    title: "Concorrendo",
+    name: "tickets_count",
+    defaultContent: "-",
+    render: (_d, _t, row) => row?.ticketsCount ?? "-",
+  },
+  {
+    data: null,
+    title: "Opções",
+    name: "options",
+    defaultContent: "-",
+    render: (_d, _t, row) => {
+      if (!row?.status) return "-";
+      if (row.status === 'scheduled') {
+        return `<button class='btn btn-success btn-sm js-start-raffle' data-id='${row.id}' title='Iniciar Rodada'><i class='fas fa-play'></i> Iniciar Rodada</button>`;
       }
-
-      const hasMirror = !!row?.mirror;
-      const disabledStyle = hasMirror ? "" : "opacity:0.6; pointer-events:none;";
-      const title = hasMirror ? "Ver canhoto" : "Sem canhoto";
-
-      return `
-        <a href="#"
-           class="badge bg-success text-decoration-none js-open-mirror"
-           style="cursor:pointer; ${disabledStyle}"
-           title="${title}">
-          Sim
-        </a>
-      `;
-    },
-  },
-
-  {
-    data: "paid",
-    title: "Paga",
-    name: "paid",
-    orderable: false,
-    render: (val) => {
-      const ok = Number(val) === 1;
-      const cls = ok ? "badge bg-success" : "badge bg-warning text-dark";
-      return `<span class="${cls}">${ok ? "Sim" : "Não"}</span>`;
-    },
-  },
+      if (row.status === 'running') {
+        return `
+          <button class='btn btn-info btn-sm js-export-csv' data-id='${row.id}' title='Baixar CSV'><i class='fas fa-file-csv'></i> Baixar CSV</button>
+          <button class='btn btn-danger btn-sm js-end-raffle' data-id='${row.id}' data-raffle='${id}' title='Encerrar Rodada'><i class='fas fa-stop'></i> Encerrar Rodada</button>
+        `;
+      }
+      if (row.status === 'closed') {
+        return `<span class='text-muted'>Rodada Encerrada</span>`;
+      }
+      return "-";
+    }
+  }
 ];
 
 // ===== DataTables options =====
@@ -207,10 +180,11 @@ const options = {
 // ===== server-side ajax =====
 async function ajaxTickets(dtRequest, callback) {
   try {
+
     const length = dtRequest.length || 30;
     const page = Math.floor((dtRequest.start || 0) / length) + 1;
 
-    const endpoint = "/tickets";
+    const endpoint = `/raffle/${id}/rounds`;
     const rawFilters = filters.value || {};
 
     // limpa params vazios (igual vendors)
@@ -241,7 +215,7 @@ async function ajaxTickets(dtRequest, callback) {
         ...params,
       },
     });
-
+    
     const meta = data?.meta || {};
     const rows = Array.isArray(data?.data) ? data.data : [];
 
@@ -265,8 +239,64 @@ async function ajaxTickets(dtRequest, callback) {
 }
 
 // ===== capture click inside DataTables (supports responsive child rows) =====
-function onTableClick(e) {
-  const el = e.target?.closest?.(".js-open-mirror");
+async function onTableClick(e) {
+  // Botão: Iniciar Sorteio
+  const startBtn = e.target?.closest?.('.js-start-raffle');
+  if (startBtn) {
+    e.preventDefault();
+    const roundId = startBtn.getAttribute('data-id');
+    if (roundId) {
+      try {
+        await api.post(`/raffle/round/${roundId}/start`);
+        reloadTable();
+      } catch (err) {
+        alert('Erro ao iniciar sorteio.');
+      }
+    }
+    return;
+  }
+
+  // Botão: Baixar CSV
+  const exportBtn = e.target?.closest?.('.js-export-csv');
+  if (exportBtn) {
+    e.preventDefault();
+    const roundId = exportBtn.getAttribute('data-id');
+    if (roundId) {
+      try {
+        const response = await api.get(`/raffle/round/${roundId}/export`, { responseType: 'blob' });
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `sorteio_${roundId}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+      } catch (err) {
+        alert('Erro ao exportar CSV.');
+      }
+    }
+    return;
+  }
+
+  // Botão: Encerrar Sorteio
+  const endBtn = e.target?.closest?.('.js-end-raffle');
+  if (endBtn) {
+    e.preventDefault();
+    const roundId = endBtn.getAttribute('data-id');
+    if (roundId) {
+      try {
+        await api.post(`/raffle/round/${roundId}/end`);
+        reloadTable();
+      } catch (err) {
+        alert('Erro ao encerrar Rodada.');
+      }
+    }
+    return;
+  }
+
+  // Modal canhoto (mantém funcionalidade existente)
+  const el = e.target?.closest?.('.js-open-mirror');
   if (!el) return;
 
   e.preventDefault();
@@ -274,17 +304,17 @@ function onTableClick(e) {
   const dt = dtRef.value?.dt;
   if (!dt) return;
 
-  let tr = el.closest("tr");
+  let tr = el.closest('tr');
   if (!tr) return;
 
   // ✅ responsive mode creates a "child" row; the real data row is the previous sibling
-  if (tr.classList.contains("child")) {
+  if (tr.classList.contains('child')) {
     tr = tr.previousElementSibling;
   }
 
   const rowData = dt.row(tr).data();
 
-  console.log("rowData click:", rowData);
+  console.log('rowData click:', rowData);
 
   if (!rowData?.mirror) return;
   openMirrorModal(rowData);
@@ -301,7 +331,7 @@ onMounted(loadUnits);
           <div class="card-header pb-0">
             <div class="row">
               <div class="col-6 d-flex align-items-center">
-                <h6 class="mb-0">Cartelas</h6>
+                <h6 class="mb-0">Rodadas</h6>
               </div>
               <div class="col-6 text-end">
                 <button class="btn bg-gradient-dark mb-0" type="button" @click="reloadTable">
@@ -313,56 +343,8 @@ onMounted(loadUnits);
 
           <div class="card-body">
             <div class="row">
-              <!-- ✅ FILTROS -->
-              <div class="col-3 tickets-filters">
-                <Vueform ref="filterForm" :endpoint="false" @submit="handleFilter">
-                  <GroupElement name="container4">
-                    <GroupElement name="column1" :columns="{ container: 12 }">
-                      <TextElement name="ticket_number" label="Cartela" />
-
-                      <SelectElement name="unit_id" :items="unitOptions" :search="true" :native="false"
-                        label="Comunidade" input-type="search" autocomplete="off" @change="handleUnitFilterChange" />
-
-                      <SelectElement name="group_id" :items="groupOptions" :search="true" :native="false"
-                        label="Paróquia" input-type="search" autocomplete="off"
-                        :disabled="groupLoading || groupOptions.length === 0" />
-                    </GroupElement>
-
-                    <GroupElement name="column4" :columns="{ container: 12 }">
-                      <StaticElement name="p" tag="blockquote"
-                        content="<div><strong>Buscar por vendedor</strong></div>" />
-                      <TextElement name="vendor_name" label="Nome Vendedor" />
-                      <TextElement name="vendor_whatsapp" label="Whatsapp Vendedor" />
-                    </GroupElement>
-
-                    <GroupElement name="column4_1" :columns="{ container: 12 }">
-                      <SelectElement name="validated" :items="[
-                        {
-                          value: null,
-                          label: 'Todas',
-                        },
-                        {
-                          value: 1,
-                          label: 'Validadas',
-                        },
-                        {
-                          value: 0,
-                          label: 'Não Validadas',
-                        },
-                      ]" :search="true" :native="true" label="Status" input-type="search" autocomplete="off" :default="null"  />
-                    </GroupElement>
-
-                    <GroupElement name="column4_2" :columns="{ container: 12 }">
-                      <ButtonElement name="submit" button-label="Filtrar" :submits="true" :columns="{ container: 6 }" />
-                      <ButtonElement name="reset" button-label="Limpar" :secondary="true" :submits="false"
-                        :columns="{ container: 6 }" @click="handleResetFilters" />
-                    </GroupElement>
-                  </GroupElement>
-                </Vueform>
-              </div>
-
               <!-- ✅ TABELA -->
-              <div class="col-9 tickets-table">
+              <div class="col-12 tickets-table">
                 <!-- wrapper captura clique nos badges -->
                 <div @click="onTableClick">
                   <DataTable ref="dtRef" class="table table-striped table-hover align-items-center mb-0"
@@ -379,7 +361,6 @@ onMounted(loadUnits);
     <BaseModal v-model="showMirrorModal" title="Canhoto" @close="closeMirrorModal">
       <div class="mb-2">
         <strong>Cartela:</strong> {{ mirrorTicketNumber || "-" }}
-        <br><strong>Data de Validação:</strong> {{ mirrorTicketValidatedDate || "-" }}
       </div>
 
       <div v-if="mirrorUrl" class="text-center">

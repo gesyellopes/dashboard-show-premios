@@ -76,6 +76,22 @@ const routes = [
     props: true
   },
   {
+    path: "/units",
+    name: "Comunidades",
+    component: () => import("../views/Comunidades.vue"),
+  },
+  {
+    path: "/sorteios",
+    name: "Sorteios",
+    component: () => import("../views/sorteio/List.vue"),
+  },
+  {
+    path: "/sorteios/:id",
+    name: "Rodadas Sorteio",
+    component: () => import("../views/sorteio/Details.vue"),
+    props: true
+  },
+  {
     path: "/logout",
     name: "Logout",
     beforeEnter: (to, from, next) => {

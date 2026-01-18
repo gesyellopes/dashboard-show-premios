@@ -26,18 +26,37 @@ function setTableLoading(isLoading) {
 const showMirrorModal = ref(false);
 const mirrorUrl = ref("");
 const mirrorTicketNumber = ref("");
-const mirrorTicketValidatedDate = ref("");
 const mirrorLoadError = ref(false);
 
 const STORAGE_BASE = "https://storage.showdepremios.cloud/file/";
+
+function formatBrWhatsapp(value) {
+    if (!value) return "-";
+    const digits = String(value).replace(/\D/g, "");
+    const d = digits.startsWith("55") ? digits.slice(2) : digits;
+    if (d.length < 10) return value;
+
+    const ddd = d.slice(0, 2);
+    const rest = d.slice(2);
+
+    // celular 9 dígitos
+    if (rest.length === 9) {
+        return `(${ddd}) ${rest.slice(0, 1)} ${rest.slice(1, 5)}-${rest.slice(5, 9)}`;
+    }
+
+    // fixo 8 dígitos
+    if (rest.length === 8) {
+        return `(${ddd}) ${rest.slice(0, 4)}-${rest.slice(4, 8)}`;
+    }
+
+    return value;
+}
 
 function openMirrorModal(row) {
   if (!row?.mirror) return;
 
   mirrorLoadError.value = false;
   mirrorTicketNumber.value = row.ticketNumber ?? "";
-
-  mirrorTicketValidatedDate.value = row.validatedOn ?? "";
 
   const filename = encodeURIComponent(String(row.mirror).trim());
   mirrorUrl.value = `${STORAGE_BASE}${filename}`;
@@ -54,13 +73,10 @@ function closeMirrorModal() {
 }
 
 // ===== Filters (Vueform) =====
-const filterForm = ref(null);
 const filters = ref({});
 
 // options combos
 const unitOptions = ref([]);
-const groupOptions = ref([]);
-const groupLoading = ref(false);
 
 // carrega comunidades
 const loadUnits = async () => {
@@ -76,120 +92,57 @@ const loadUnits = async () => {
   }
 };
 
-// reseta combo de paróquia
-const resetGroupFilter = () => {
-  groupOptions.value = [];
-  const form = filterForm.value;
-  if (form?.el$) {
-    form.el$("group_id")?.update(null);
-  }
-};
-
-// mesma lógica do vendors: ao selecionar unidade, busca grupos
-const handleUnitFilterChange = async (value) => {
-  const unitId = value?.value ?? value;
-
-  if (!unitId) {
-    resetGroupFilter();
-    return;
-  }
-
-  groupLoading.value = true;
-  resetGroupFilter();
-
-  try {
-    const { data } = await api.get(`/groups/by-unit/${unitId}`);
-    const groups = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
-    groupOptions.value = groups.map((g) => ({
-      value: g.id,
-      label: g.name,
-    }));
-  } catch (error) {
-    console.error("Failed to load groups by unit", error);
-  } finally {
-    groupLoading.value = false;
-  }
-};
-
-const handleFilter = (form$) => {
-  filters.value = { ...form$.requestData };
-  setTableLoading(true);
-  reloadTable();
-};
-
-const handleResetFilters = () => {
-  filters.value = {};
-  if (filterForm.value) filterForm.value.reset();
-  resetGroupFilter();
-  setTableLoading(true);
-  reloadTable();
-};
-
 // ===== Columns =====
 const columns = [
-  { data: "ticketNumber", title: "Cartela", name: "ticketNumber" },
-
   {
     data: null,
     title: "Comunidade",
     name: "unit",
     defaultContent: "-",
-    render: (_d, _t, row) => row?.unit?.name ?? "-",
+    render: (_d, _t, row) => row?.name ?? "-",
   },
   {
     data: null,
-    title: "Paróquia",
-    name: "group",
+    title: "Coordenador",
+    name: "coordinator",
     defaultContent: "-",
-    render: (_d, _t, row) => row?.group?.name ?? "-",
+    render: (_d, _t, row) => row?.manager?.name ?? "-",
   },
   {
     data: null,
-    title: "Vendedor",
-    name: "vendor",
+    title: "Whatsapp",
+    name: "coordinator_whatsapp",
     defaultContent: "-",
-    render: (_d, _t, row) => row?.vendor?.name ?? "-",
+    render: (_d, _t, row) => formatBrWhatsapp(row?.manager?.whatsapp) ?? "-",
   },
-
-  // ✅ Validada clicável (só se "Sim" e tiver mirror)
   {
-    data: "validated",
-    title: "Validada",
-    name: "validated",
-    orderable: false,
-    render: (_val, _type, row) => {
-      const ok = Number(row?.validated) === 1;
-
-      if (!ok) {
-        return `<span class="badge bg-secondary">Não</span>`;
-      }
-
-      const hasMirror = !!row?.mirror;
-      const disabledStyle = hasMirror ? "" : "opacity:0.6; pointer-events:none;";
-      const title = hasMirror ? "Ver canhoto" : "Sem canhoto";
-
-      return `
-        <a href="#"
-           class="badge bg-success text-decoration-none js-open-mirror"
-           style="cursor:pointer; ${disabledStyle}"
-           title="${title}">
-          Sim
-        </a>
-      `;
-    },
+    data: null,
+    title: "Cartelas",
+    name: "total_tickets",
+    defaultContent: "-",
+    render: (_d, _t, row) => row?.counts?.totalTickets ?? "-",
   },
-
   {
-    data: "paid",
-    title: "Paga",
-    name: "paid",
-    orderable: false,
-    render: (val) => {
-      const ok = Number(val) === 1;
-      const cls = ok ? "badge bg-success" : "badge bg-warning text-dark";
-      return `<span class="${cls}">${ok ? "Sim" : "Não"}</span>`;
-    },
+    data: null,
+    title: "Validadas",
+    name: "validated_tickets",
+    defaultContent: "-",
+    render: (_d, _t, row) => row?.counts?.validatedTickets ?? "-",
   },
+  {
+    data: null,
+    title: "Não Validadas",
+    name: "not_validated_tickets",
+    defaultContent: "-",
+    render: (_d, _t, row) => row?.counts?.awaitValidationTickets ?? "-",
+  },
+  {
+    data: null,
+    title: "Devolvidas",
+    name: "returned_tickets",
+    defaultContent: "-",
+    render: (_d, _t, row) => row?.counts?.returnedTickets ?? "-",
+  }
 ];
 
 // ===== DataTables options =====
@@ -210,7 +163,7 @@ async function ajaxTickets(dtRequest, callback) {
     const length = dtRequest.length || 30;
     const page = Math.floor((dtRequest.start || 0) / length) + 1;
 
-    const endpoint = "/tickets";
+    const endpoint = "/units/list";
     const rawFilters = filters.value || {};
 
     // limpa params vazios (igual vendors)
@@ -301,7 +254,7 @@ onMounted(loadUnits);
           <div class="card-header pb-0">
             <div class="row">
               <div class="col-6 d-flex align-items-center">
-                <h6 class="mb-0">Cartelas</h6>
+                <h6 class="mb-0">Comunidades</h6>
               </div>
               <div class="col-6 text-end">
                 <button class="btn bg-gradient-dark mb-0" type="button" @click="reloadTable">
@@ -313,56 +266,8 @@ onMounted(loadUnits);
 
           <div class="card-body">
             <div class="row">
-              <!-- ✅ FILTROS -->
-              <div class="col-3 tickets-filters">
-                <Vueform ref="filterForm" :endpoint="false" @submit="handleFilter">
-                  <GroupElement name="container4">
-                    <GroupElement name="column1" :columns="{ container: 12 }">
-                      <TextElement name="ticket_number" label="Cartela" />
-
-                      <SelectElement name="unit_id" :items="unitOptions" :search="true" :native="false"
-                        label="Comunidade" input-type="search" autocomplete="off" @change="handleUnitFilterChange" />
-
-                      <SelectElement name="group_id" :items="groupOptions" :search="true" :native="false"
-                        label="Paróquia" input-type="search" autocomplete="off"
-                        :disabled="groupLoading || groupOptions.length === 0" />
-                    </GroupElement>
-
-                    <GroupElement name="column4" :columns="{ container: 12 }">
-                      <StaticElement name="p" tag="blockquote"
-                        content="<div><strong>Buscar por vendedor</strong></div>" />
-                      <TextElement name="vendor_name" label="Nome Vendedor" />
-                      <TextElement name="vendor_whatsapp" label="Whatsapp Vendedor" />
-                    </GroupElement>
-
-                    <GroupElement name="column4_1" :columns="{ container: 12 }">
-                      <SelectElement name="validated" :items="[
-                        {
-                          value: null,
-                          label: 'Todas',
-                        },
-                        {
-                          value: 1,
-                          label: 'Validadas',
-                        },
-                        {
-                          value: 0,
-                          label: 'Não Validadas',
-                        },
-                      ]" :search="true" :native="true" label="Status" input-type="search" autocomplete="off" :default="null"  />
-                    </GroupElement>
-
-                    <GroupElement name="column4_2" :columns="{ container: 12 }">
-                      <ButtonElement name="submit" button-label="Filtrar" :submits="true" :columns="{ container: 6 }" />
-                      <ButtonElement name="reset" button-label="Limpar" :secondary="true" :submits="false"
-                        :columns="{ container: 6 }" @click="handleResetFilters" />
-                    </GroupElement>
-                  </GroupElement>
-                </Vueform>
-              </div>
-
               <!-- ✅ TABELA -->
-              <div class="col-9 tickets-table">
+              <div class="col-12 tickets-table">
                 <!-- wrapper captura clique nos badges -->
                 <div @click="onTableClick">
                   <DataTable ref="dtRef" class="table table-striped table-hover align-items-center mb-0"
@@ -379,7 +284,6 @@ onMounted(loadUnits);
     <BaseModal v-model="showMirrorModal" title="Canhoto" @close="closeMirrorModal">
       <div class="mb-2">
         <strong>Cartela:</strong> {{ mirrorTicketNumber || "-" }}
-        <br><strong>Data de Validação:</strong> {{ mirrorTicketValidatedDate || "-" }}
       </div>
 
       <div v-if="mirrorUrl" class="text-center">

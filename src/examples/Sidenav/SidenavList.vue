@@ -51,15 +51,6 @@ const getRoute = () => {
       </li>
 
       <li class="nav-item">
-        <sidenav-item to="/tables" :class="getRoute() === 'groups' ? 'active' : ''"
-          navText="Pastorais">
-          <template v-slot:icon>
-            <i class="fa-regular fa-handshake text-white text-sm opacity-10"></i>
-          </template>
-        </sidenav-item>
-      </li>
-
-      <li class="nav-item">
         <sidenav-item to="/vendors" :class="getRoute() === 'vendors' ? 'active' : ''"
           navText="Vendedores">
           <template v-slot:icon>

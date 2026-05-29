@@ -29,7 +29,7 @@ const mirrorTicketNumber = ref("");
 const mirrorTicketValidatedDate = ref("");
 const mirrorLoadError = ref(false);
 
-const STORAGE_BASE = "https://storage.showdepremios.cloud/file/";
+const STORAGE_BASE = "https://files.showdepremios.cloud/tickets/";
 
 function openMirrorModal(row) {
   if (!row?.mirror) return;

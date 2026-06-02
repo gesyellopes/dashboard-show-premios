@@ -4,8 +4,6 @@ import DataTable from "datatables.net-vue3";
 import DataTablesCore from "datatables.net-bs5";
 import "datatables.net-bs5/css/dataTables.bootstrap5.min.css";
 
-import router from "@/router";
-
 //Modals
 import VendorCreateModal from "./modals/VendorCreateModal.vue";
 import VendorEditModal from "./modals/VendorEditModal.vue";
@@ -37,12 +35,6 @@ const filterForm = ref(null);
 const filters = ref({});
 const groupOptions = ref([]);
 const groupLoading = ref(false);
-
-function goToVendor(id) {
-    const url = router.resolve({ name: "VendorDetails", params: { id } });
-    window.open(url.href, "_blank"); 
-}
-
 
 function reloadTable() {
     const dt = dtRef.value?.dt;
@@ -422,7 +414,7 @@ onMounted(loadUnits);
                             <!-- slot pro nome virar link -->
                             <template #nameCell="props">
                                 <a href="#" class="text-decoration-none fw-bold"
-                                    @click.prevent="goToVendor(props.rowData.id)">
+                                    @click.prevent="openEditModal(props.rowData)">
                                     {{ props.cellData }}
                                 </a>
                             </template>

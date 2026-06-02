@@ -32,11 +32,20 @@ const kpiValues = computed(() => ({
   verifiedPercent: kpis.value.verifiedPercent
 }));
 
+const salesTotals = computed(() => {
+  const totalTickets = sales.value.reduce((sum, sale) => sum + sale.tickets, 0);
+  const totalVerified = sales.value.reduce((sum, sale) => sum + sale.verified, 0);
+  const totalVendors = sales.value.reduce((sum, sale) => sum + sale.vendors, 0);
+  const verifiedPercent = totalTickets > 0 ? ((totalVerified / totalTickets) * 100).toFixed(2) : "0.00";
+
+  return { totalTickets, totalVerified, verifiedPercent, totalVendors };
+});
+
 const loadKpis = async () => {
   kpisLoading.value = true;
   try {
     const { data } = await api.get("/report/kpis");
-    
+
     if(data){
       Object.assign(kpis.value, data);
     }
@@ -47,6 +56,8 @@ const loadKpis = async () => {
           100
         ).toFixed(2)
       : "0.00";
+
+    kpis.value.total_fianncial = kpis.value.total_validated_tickets * 15;
 
       console.log("Loaded KPIs:", kpis.value);
   } catch (error) {
@@ -186,6 +197,30 @@ onMounted(() => {
                           <div class="text-center col">
                             <p class="mb-0 text-xs font-weight-bold">Vendedores</p>
                             <h6 class="mb-0 text-sm">{{ sale.vendors }}</h6>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr class="border-top fw-bold" style="background-color: rgba(0, 25, 70, 0.4);">
+                        <td class="w-30">
+                          <div class="px-2 py-1 d-flex align-items-center">
+                            <div class="ms-4">
+                              <h6 class="mb-0 text-sm">TOTAL</h6>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div class="text-center">
+                            <h6 class="mb-0 text-sm">{{ salesTotals.totalTickets }}</h6>
+                          </div>
+                        </td>
+                        <td>
+                          <div class="text-center">
+                            <h6 class="mb-0 text-sm">{{ salesTotals.totalVerified }} | {{ salesTotals.verifiedPercent }}%</h6>
+                          </div>
+                        </td>
+                        <td class="text-sm align-middle">
+                          <div class="text-center col">
+                            <h6 class="mb-0 text-sm">{{ salesTotals.totalVendors }}</h6>
                           </div>
                         </td>
                       </tr>

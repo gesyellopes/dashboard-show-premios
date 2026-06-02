@@ -1,18 +1,22 @@
 <script setup>
 import { computed } from "vue";
 import { useStore } from "vuex";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import Breadcrumbs from "../Breadcrumbs.vue";
 
-//const showMenu = ref(false);
 const store = useStore();
+const router = useRouter();
 const isRTL = computed(() => store.state.isRTL);
 
 const route = useRoute();
 
+const user = computed(() => store.state.auth.user);
+const isAuthenticated = computed(() => !!store.state.auth.token);
+
 const currentRouteName = computed(() => {
   return route.name;
 });
+
 const currentDirectory = computed(() => {
   let dir = route.path.split("/")[1];
   return dir.charAt(0).toUpperCase() + dir.slice(1);
@@ -20,15 +24,14 @@ const currentDirectory = computed(() => {
 
 const minimizeSidebar = () => store.commit("sidebarMinimize");
 
-/*
-const toggleConfigurator = () => store.commit("toggleConfigurator");
-
-const closeMenu = () => {
-  setTimeout(() => {
-    showMenu.value = false;
-  }, 100);
+const handleLogout = () => {
+  store.commit("clearAuth");
+  router.push("/signin");
 };
-*/
+
+const handleMyAccount = () => {
+  router.push("/my-account");
+};
 </script>
 <template>
   <nav
@@ -55,17 +58,55 @@ const closeMenu = () => {
         >
         </div>
         <ul class="navbar-nav justify-content-end">
-          <li class="nav-item d-flex align-items-center">
+          <!-- User Menu -->
+          <li class="nav-item d-flex align-items-center" v-if="isAuthenticated">
+            <div class="dropdown">
+              <button
+                class="btn btn-link nav-link font-weight-bold text-white dropdown-toggle p-0"
+                type="button"
+                id="userMenuDropdown"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+              >
+                <img
+                  v-if="user?.avatar"
+                  :src="user.avatar"
+                  :alt="user?.name"
+                  class="avatar avatar-sm me-2"
+                  style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover"
+                />
+                <span class="d-sm-inline d-none">{{ user?.name }}</span>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end" :aria-labelledby="`userMenuDropdown`">
+                <li>
+                  <a class="dropdown-item" href="#" @click.prevent="handleMyAccount">
+                    <i class="fa fa-user me-2"></i>
+                    Minha Conta
+                  </a>
+                </li>
+                <li><hr class="dropdown-divider" /></li>
+                <li>
+                  <a class="dropdown-item text-danger" href="#" @click.prevent="handleLogout">
+                    <i class="fa fa-sign-out-alt me-2"></i>
+                    Sair
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </li>
+
+          <!-- Login Link -->
+          <li class="nav-item d-flex align-items-center" v-else>
             <router-link
               :to="{ name: 'Signin' }"
               class="px-0 nav-link font-weight-bold text-white"
-              target="_blank"
             >
               <i class="fa fa-user" :class="isRTL ? 'ms-sm-2' : 'me-sm-2'"></i>
-              <span v-if="isRTL" class="d-sm-inline d-none">يسجل دخول</span>
-              <span v-else class="d-sm-inline d-none">Minha Conta</span>
+              <span class="d-sm-inline d-none">{{ isRTL ? 'يسجل دخول' : 'Acessar' }}</span>
             </router-link>
           </li>
+
+          <!-- Sidebar Toggle -->
           <li class="nav-item d-xl-none ps-3 d-flex align-items-center">
             <a
               href="#"

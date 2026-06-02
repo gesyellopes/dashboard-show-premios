@@ -4,25 +4,33 @@ import { useStore } from "vuex";
 import { useRouter } from "vue-router";
 
 import ArgonInput from "@/components/ArgonInput.vue";
-import ArgonSwitch from "@/components/ArgonSwitch.vue";
 import ArgonButton from "@/components/ArgonButton.vue";
 
-import api from "@/services/api"; // ✅ crie esse arquivo (te passo abaixo)
+import { authService } from "@/services/authService";
 
 const body = document.getElementsByTagName("body")[0];
 
 const store = useStore();
 const router = useRouter();
 
-// ✅ form state
-const email = ref("");
+const phone = ref("");
 const password = ref("");
-const rememberMe = ref(true);
 
 const loading = ref(false);
 const errorMsg = ref("");
 
-// ✅ layout toggles (igual seu original)
+// Formata telefone para (XX) X XXXX-XXXX
+const formatPhone = (value) => {
+  const cleaned = value.replace(/\D/g, '');
+  if (cleaned.length <= 2) return cleaned;
+  if (cleaned.length <= 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+  return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7, 11)}`;
+};
+
+const handlePhoneInput = (e) => {
+  phone.value = formatPhone(e.target.value);
+};
+
 onBeforeMount(() => {
   store.state.hideConfigButton = true;
   store.state.showNavbar = false;
@@ -39,40 +47,33 @@ onBeforeUnmount(() => {
   body.classList.add("bg-gray-100");
 });
 
-// ✅ login handler
 async function handleLogin() {
   errorMsg.value = "";
 
-  if (!email.value || !password.value) {
-    errorMsg.value = "Informe e-mail e senha.";
+  if (!phone.value || !password.value) {
+    errorMsg.value = "Informe telefone e senha.";
     return;
   }
 
   loading.value = true;
 
   try {
-    const { data } = await api.post("/auth/login", {
-      email: email.value,
-      password: password.value,
-    });
+    const response = await authService.login(phone.value, password.value);
 
-    if (!data?.success) {
-      errorMsg.value = data?.message || "Credenciais inválidas";
+    if (!response.success) {
+      errorMsg.value = response.message || "Credenciais inválidas";
       return;
     }
 
-    // ✅ salva no Vuex + storage (precisa das mutations no store)
     store.commit("setAuth", {
-      token: data.token,
-      user: data.user,
-      remember: rememberMe.value,
+      token: response.token,
+      user: response.user,
+      remember: true,
     });
 
-    // ✅ manda pro dashboard (ajuste se sua rota for outra)
-    router.push("/dashboard-default");
+    router.push("/dashboard");
   } catch (err) {
-    errorMsg.value =
-      err?.response?.data?.message || "Erro ao autenticar (rede/servidor).";
+    errorMsg.value = "Erro ao autenticar. Tente novamente.";
   } finally {
     loading.value = false;
   }
@@ -91,20 +92,20 @@ async function handleLogin() {
               <div class="card card-plain">
                 <div class="pb-0 card-header text-start">
                   <h4 class="font-weight-bolder">Painel de Gerenciamento</h4>
-                  <p class="mb-0">Digite seu e-mail para continuar</p>
+                  <p class="mb-0">Digite seu telefone para continuar</p>
                 </div>
 
                 <div class="card-body">
-                  <!-- ✅ submit.prevent chama o login -->
                   <form role="form" @submit.prevent="handleLogin">
                     <div class="mb-3">
                       <argon-input
-                        id="email"
-                        type="email"
-                        placeholder="E-mail"
-                        name="email"
+                        id="phone"
+                        type="tel"
+                        placeholder="(XX) X XXXX-XXXX"
+                        name="phone"
                         size="lg"
-                        v-model="email"
+                        v-model="phone"
+                        @input="handlePhoneInput"
                       />
                     </div>
 
@@ -119,19 +120,13 @@ async function handleLogin() {
                       />
                     </div>
 
-                    <!-- ✅ lembrar-me -->
-                    <argon-switch id="rememberMe" name="remember-me" v-model="rememberMe">
-                      lembrar-me
-                    </argon-switch>
-
-                    <!-- ✅ erro -->
-                    <p v-if="errorMsg" class="text-danger text-sm mt-2 mb-0">
+                    <p v-if="errorMsg" class="text-danger text-sm mt-2 mb-3">
                       {{ errorMsg }}
                     </p>
 
                     <div class="text-center">
                       <argon-button
-                        class="mt-4"
+                        class="mt-2"
                         variant="gradient"
                         color="success"
                         fullWidth
@@ -143,18 +138,6 @@ async function handleLogin() {
                       </argon-button>
                     </div>
                   </form>
-                </div>
-
-                <div class="px-1 pt-0 text-center card-footer px-lg-2">
-                  <p class="mx-auto mb-4 text-sm">
-                    Don't have an account?
-                    <a
-                      href="javascript:;"
-                      class="text-success text-gradient font-weight-bold"
-                    >
-                      Sign up
-                    </a>
-                  </p>
                 </div>
               </div>
             </div>

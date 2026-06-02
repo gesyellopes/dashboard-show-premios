@@ -1,11 +1,17 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
+import { useStore } from "vuex";
 import DataTable from "datatables.net-vue3";
 import DataTablesCore from "datatables.net-bs5";
 import "datatables.net-bs5/css/dataTables.bootstrap5.min.css";
 
 import api from "@/services/api";
 import BaseModal from "@/views/components/BaseModal.vue"; // ajuste se seu path for outro
+import Swal from "sweetalert2";
+import { DateTime } from "luxon";
+
+const store = useStore();
+const isAdmin = computed(() => store.state.auth.user?.role === "admin");
 
 DataTable.use(DataTablesCore);
 
@@ -28,16 +34,27 @@ const mirrorUrl = ref("");
 const mirrorTicketNumber = ref("");
 const mirrorTicketValidatedDate = ref("");
 const mirrorLoadError = ref(false);
+const mirrorRowData = ref(null);
 
 const STORAGE_BASE = "https://files.showdepremios.cloud/tickets/";
+
+function formatValidatedDate(dateString) {
+  if (!dateString) return "-";
+  try {
+    const dt = DateTime.fromISO(dateString);
+    return dt.toFormat("dd/MM/yyyy 'às' HH:mm");
+  } catch {
+    return "-";
+  }
+}
 
 function openMirrorModal(row) {
   if (!row?.mirror) return;
 
   mirrorLoadError.value = false;
   mirrorTicketNumber.value = row.ticketNumber ?? "";
-
   mirrorTicketValidatedDate.value = row.validatedOn ?? "";
+  mirrorRowData.value = row;
 
   const filename = encodeURIComponent(String(row.mirror).trim());
   mirrorUrl.value = `${STORAGE_BASE}${filename}`;
@@ -51,6 +68,61 @@ function closeMirrorModal() {
   mirrorUrl.value = "";
   mirrorTicketNumber.value = "";
   mirrorLoadError.value = false;
+  mirrorRowData.value = null;
+}
+
+async function confirmInvalidate() {
+  if (!mirrorRowData.value?.ticketNumber) return;
+
+  const result = await Swal.fire({
+    icon: "warning",
+    title: "Confirmar Desvalidação",
+    text: `Deseja remover a validação da cartela "${mirrorRowData.value.ticketNumber}"?`,
+    showCancelButton: true,
+    confirmButtonText: "Sim, desvalidar",
+    cancelButtonText: "Cancelar",
+    confirmButtonColor: "#dc3545",
+  });
+
+  if (result.isConfirmed) {
+    await invalidateTicket();
+  }
+}
+
+async function invalidateTicket() {
+  if (!mirrorRowData.value?.ticketNumber) return;
+
+  try {
+    const { data } = await api.post("/invalidate", {
+      ticket_number: mirrorRowData.value.ticketNumber,
+    });
+
+    if (data?.success) {
+      await Swal.fire({
+        icon: "success",
+        title: "Sucesso",
+        text: "Cartela desvalidada com sucesso.",
+      });
+
+      closeMirrorModal();
+      reloadTable();
+      return;
+    }
+
+    await Swal.fire({
+      icon: "error",
+      title: "Erro",
+      text: data?.message || "Erro ao desvalidar a cartela.",
+    });
+  } catch (error) {
+    const message = error?.response?.data?.message || "Erro ao desvalidar a cartela.";
+
+    await Swal.fire({
+      icon: "error",
+      title: "Erro",
+      text: message,
+    });
+  }
 }
 
 // ===== Filters (Vueform) =====
@@ -131,14 +203,14 @@ const columns = [
 
   {
     data: null,
-    title: "Comunidade",
+    title: "Paróquia",
     name: "unit",
     defaultContent: "-",
     render: (_d, _t, row) => row?.unit?.name ?? "-",
   },
   {
     data: null,
-    title: "Paróquia",
+    title: "Comunidade",
     name: "group",
     defaultContent: "-",
     render: (_d, _t, row) => row?.group?.name ?? "-",
@@ -179,17 +251,6 @@ const columns = [
     },
   },
 
-  {
-    data: "paid",
-    title: "Paga",
-    name: "paid",
-    orderable: false,
-    render: (val) => {
-      const ok = Number(val) === 1;
-      const cls = ok ? "badge bg-success" : "badge bg-warning text-dark";
-      return `<span class="${cls}">${ok ? "Sim" : "Não"}</span>`;
-    },
-  },
 ];
 
 // ===== DataTables options =====
@@ -321,10 +382,10 @@ onMounted(loadUnits);
                       <TextElement name="ticket_number" label="Cartela" />
 
                       <SelectElement name="unit_id" :items="unitOptions" :search="true" :native="false"
-                        label="Comunidade" input-type="search" autocomplete="off" @change="handleUnitFilterChange" />
+                        label="Paróquia" input-type="search" autocomplete="off" @change="handleUnitFilterChange" />
 
                       <SelectElement name="group_id" :items="groupOptions" :search="true" :native="false"
-                        label="Paróquia" input-type="search" autocomplete="off"
+                        label="Comunidade" input-type="search" autocomplete="off"
                         :disabled="groupLoading || groupOptions.length === 0" />
                     </GroupElement>
 
@@ -379,7 +440,7 @@ onMounted(loadUnits);
     <BaseModal v-model="showMirrorModal" title="Canhoto" @close="closeMirrorModal">
       <div class="mb-2">
         <strong>Cartela:</strong> {{ mirrorTicketNumber || "-" }}
-        <br><strong>Data de Validação:</strong> {{ mirrorTicketValidatedDate || "-" }}
+        <br><strong>Data de Validação:</strong> {{ formatValidatedDate(mirrorTicketValidatedDate) }}
       </div>
 
       <div v-if="mirrorUrl" class="text-center">
@@ -397,9 +458,14 @@ onMounted(loadUnits);
       <div v-else class="text-muted">Sem imagem.</div>
 
       <template #footer>
-        <button class="btn btn-outline-dark mb-0" type="button" @click="closeMirrorModal">
-          Fechar
-        </button>
+        <div class="d-flex gap-2">
+          <button v-if="isAdmin" class="btn btn-danger mb-0" type="button" @click="confirmInvalidate">
+            <i class="fas fa-trash"></i>&nbsp;&nbsp;Desvalidar
+          </button>
+          <button class="btn btn-outline-dark mb-0" type="button" @click="closeMirrorModal">
+            Fechar
+          </button>
+        </div>
       </template>
     </BaseModal>
   </div>

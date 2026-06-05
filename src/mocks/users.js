@@ -30,7 +30,29 @@ export const MOCK_USERS = [
     avatar: "https://ui-avatars.com/api/?name=Messias&background=00B4D8&color=fff",
     department: "Operações",
     email: "gerente2@example.com",
-    location: "Rio de Janeiro, RJ"
+    location: "Buritizeiro - MG"
+  },
+  {
+    id: 4,
+    phone: "38998028580",
+    password: "jaq8580",
+    name: "Jaques",
+    role: "manager",
+    avatar: "https://ui-avatars.com/api/?name=Jaques&background=00B4D8&color=fff",
+    department: "Operações",
+    email: "gerente2@example.com",
+    location: "Buritizeiro - MG"
+  },
+  {
+    id: 5,
+    phone: "38999798092",
+    password: "vivi9979",
+    name: "Viviany de Paula",
+    role: "manager",
+    avatar: "https://ui-avatars.com/api/?name=Viviany+Paula&background=00B4D8&color=fff",
+    department: "Operações",
+    email: "gerente2@example.com",
+    location: "Buritizeiro - MG"
   }
 ];
 

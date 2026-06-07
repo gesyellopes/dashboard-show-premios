@@ -1,9 +1,13 @@
 <script setup>
+import { computed } from "vue";
 import { useRoute } from "vue-router";
+import { useStore } from "vuex";
 
 import SidenavItem from "./SidenavItem.vue";
 //import SidenavCard from "./SidenavCard.vue";
 
+const store = useStore();
+const userRole = computed(() => store.state.auth.user?.role);
 
 const getRoute = () => {
   const route = useRoute();
@@ -23,7 +27,7 @@ const getRoute = () => {
         </sidenav-item>
       </li>
 
-      <li class="nav-item">
+      <li class="nav-item" v-if="userRole === 'admin'">
           <sidenav-item to="/sorteios" :class="getRoute() === 'sorteios' ? 'active' : ''"
             navText="Sorteios">
             <template v-slot:icon>

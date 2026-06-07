@@ -35,6 +35,8 @@ const mirrorTicketNumber = ref("");
 const mirrorTicketValidatedDate = ref("");
 const mirrorLoadError = ref(false);
 const mirrorRowData = ref(null);
+const mirrorWhatsappSenderNumber = ref("");
+const mirrorWhatsappSenderName = ref("");
 
 const STORAGE_BASE = "https://files.showdepremios.cloud/tickets/";
 
@@ -48,12 +50,25 @@ function formatValidatedDate(dateString) {
   }
 }
 
+function formatPhoneBR(phone) {
+  if (!phone) return "-";
+  let cleaned = phone.replace(/\D/g, '');
+  if (cleaned.startsWith('55')) cleaned = cleaned.slice(2);
+  if (cleaned.length !== 10 && cleaned.length !== 11) return phone;
+  if (cleaned.length === 10) {
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`;
+  }
+  return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+}
+
 function openMirrorModal(row) {
   if (!row?.mirror) return;
 
   mirrorLoadError.value = false;
   mirrorTicketNumber.value = row.ticketNumber ?? "";
   mirrorTicketValidatedDate.value = row.validatedOn ?? "";
+  mirrorWhatsappSenderNumber.value = row.whatsappSenderNumber ?? "";
+  mirrorWhatsappSenderName.value = row.whatsappSenderName ?? "";
   mirrorRowData.value = row;
 
   const filename = encodeURIComponent(String(row.mirror).trim());
@@ -69,6 +84,8 @@ function closeMirrorModal() {
   mirrorTicketNumber.value = "";
   mirrorLoadError.value = false;
   mirrorRowData.value = null;
+  mirrorWhatsappSenderNumber.value = "";
+  mirrorWhatsappSenderName.value = "";
 }
 
 async function confirmInvalidate() {
@@ -441,6 +458,10 @@ onMounted(loadUnits);
       <div class="mb-2">
         <strong>Cartela:</strong> {{ mirrorTicketNumber || "-" }}
         <br><strong>Data de Validação:</strong> {{ formatValidatedDate(mirrorTicketValidatedDate) }}
+        <div v-if="mirrorWhatsappSenderNumber || mirrorWhatsappSenderName" class="mt-2 pt-2 border-top">
+          <strong>Contato:</strong> {{ mirrorWhatsappSenderName || "-" }}
+          <br><strong>Telefone:</strong> {{ formatPhoneBR(mirrorWhatsappSenderNumber) }}
+        </div>
       </div>
 
       <div v-if="mirrorUrl" class="text-center">

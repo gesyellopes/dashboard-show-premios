@@ -12,7 +12,7 @@ export const MOCK_USERS = [
   },
   {
     id: 2,
-    phone: "38999412329",
+    phone: "389994123291",
     password: "joao123",
     name: "João Nunes",
     role: "manager",
@@ -23,7 +23,7 @@ export const MOCK_USERS = [
   },
   {
     id: 3,
-    phone: "38998151209",
+    phone: "389981512091",
     password: "messias456",
     name: "Messias",
     role: "manager",
@@ -34,7 +34,7 @@ export const MOCK_USERS = [
   },
   {
     id: 4,
-    phone: "38998028580",
+    phone: "389980285801",
     password: "jaq8580",
     name: "Jaques",
     role: "manager",
@@ -45,11 +45,22 @@ export const MOCK_USERS = [
   },
   {
     id: 5,
-    phone: "38999798092",
+    phone: "389997980921",
     password: "vivi9979",
     name: "Viviany de Paula",
     role: "manager",
     avatar: "https://ui-avatars.com/api/?name=Viviany+Paula&background=00B4D8&color=fff",
+    department: "Operações",
+    email: "gerente2@example.com",
+    location: "Buritizeiro - MG"
+  },
+  {
+    id: 5,
+    phone: "38999821164",
+    password: "sim9852",
+    name: "Simone Santiago",
+    role: "manager",
+    avatar: "https://ui-avatars.com/api/?name=Simone+Santiago&background=00B4D8&color=fff",
     department: "Operações",
     email: "gerente2@example.com",
     location: "Buritizeiro - MG"

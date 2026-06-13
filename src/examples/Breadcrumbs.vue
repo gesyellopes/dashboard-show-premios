@@ -38,7 +38,7 @@ defineProps({
           :class="isNavFixed ? 'text-dark' : 'text-white'"
           class="opacity-8"
           href="#"
-          >Início / Arraial Buritis</a
+          >Início / São Sebastião</a
         >
       </li>
       <li

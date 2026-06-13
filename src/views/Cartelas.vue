@@ -37,6 +37,8 @@ const mirrorLoadError = ref(false);
 const mirrorRowData = ref(null);
 const mirrorWhatsappSenderNumber = ref("");
 const mirrorWhatsappSenderName = ref("");
+const mirrorOriginalUrl = ref("");
+const mirrorAttemptedFallback = ref(false);
 
 const STORAGE_BASE = "https://files.showdepremios.cloud/tickets/";
 
@@ -65,6 +67,7 @@ function openMirrorModal(row) {
   if (!row?.mirror) return;
 
   mirrorLoadError.value = false;
+  mirrorAttemptedFallback.value = false;
   mirrorTicketNumber.value = row.ticketNumber ?? "";
   mirrorTicketValidatedDate.value = row.validatedOn ?? "";
   mirrorWhatsappSenderNumber.value = row.whatsappSenderNumber ?? "";
@@ -72,17 +75,43 @@ function openMirrorModal(row) {
   mirrorRowData.value = row;
 
   const filename = encodeURIComponent(String(row.mirror).trim());
-  mirrorUrl.value = `${STORAGE_BASE}${filename}`;
+  mirrorOriginalUrl.value = `${STORAGE_BASE}${filename}`;
+  mirrorUrl.value = mirrorOriginalUrl.value;
 
   console.log("mirrorUrl:", mirrorUrl.value);
   showMirrorModal.value = true;
 }
 
+function handleMirrorImageError() {
+  if (mirrorAttemptedFallback.value) {
+    mirrorLoadError.value = true;
+    return;
+  }
+
+  const url = mirrorUrl.value;
+  let fallbackUrl = "";
+
+  if (url.endsWith(".jpeg")) {
+    fallbackUrl = url.slice(0, -5) + ".jpg";
+  } else if (url.endsWith(".jpg")) {
+    fallbackUrl = url.slice(0, -4) + ".jpeg";
+  }
+
+  if (fallbackUrl) {
+    mirrorAttemptedFallback.value = true;
+    mirrorUrl.value = fallbackUrl;
+  } else {
+    mirrorLoadError.value = true;
+  }
+}
+
 function closeMirrorModal() {
   showMirrorModal.value = false;
   mirrorUrl.value = "";
+  mirrorOriginalUrl.value = "";
   mirrorTicketNumber.value = "";
   mirrorLoadError.value = false;
+  mirrorAttemptedFallback.value = false;
   mirrorRowData.value = null;
   mirrorWhatsappSenderNumber.value = "";
   mirrorWhatsappSenderName.value = "";
@@ -466,7 +495,7 @@ onMounted(loadUnits);
 
       <div v-if="mirrorUrl" class="text-center">
         <img :src="mirrorUrl" alt="Canhoto" class="img-fluid rounded" style="max-height: 70vh;"
-          @error="mirrorLoadError = true" v-show="!mirrorLoadError" />
+          @error="handleMirrorImageError" v-show="!mirrorLoadError" />
 
         <div v-if="mirrorLoadError" class="alert alert-warning text-start mt-3">
           Não foi possível carregar a imagem.

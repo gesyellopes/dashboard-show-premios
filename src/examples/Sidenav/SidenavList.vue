@@ -45,6 +45,15 @@ const getRoute = () => {
         </sidenav-item>
       </li>
 
+      <li class="nav-item" v-if="userRole === 'admin'">
+        <sidenav-item to="/canhotos" :class="getRoute() === 'canhotos' ? 'active' : ''"
+          navText="Canhotos">
+          <template v-slot:icon>
+            <i class="fa-regular fa-image text-warning text-sm opacity-10"></i>
+          </template>
+        </sidenav-item>
+      </li>
+
       <li class="nav-item">
         <sidenav-item to="/units" :class="getRoute() === 'units' ? 'active' : ''"
           navText="Comunidades">

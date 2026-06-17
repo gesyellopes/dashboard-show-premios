@@ -11,6 +11,7 @@ import MyAccount from "../views/MyAccount.vue";
 
 //Componentes
 import Tickets from "../views/Cartelas.vue";
+import Canhotos from "../views/Canhotos.vue";
 import Vendors from "../views/vendors/Vendors.vue";
 import VendorDetails from "../views/vendors/VendorDetails.vue";
 
@@ -83,6 +84,12 @@ const routes = [
     name: "Cartelas",
     component: Tickets,
     meta: { requiresAuth: true }
+  },
+  {
+    path: "/canhotos",
+    name: "Canhotos",
+    component: Canhotos,
+    meta: { requiresAuth: true, adminOnly: true }
   },
   {
     path: "/vendors",

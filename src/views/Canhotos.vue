@@ -41,6 +41,7 @@ const canhotoOriginalUrl = ref("");
 const canhotoAttemptedFallback = ref(false);
 const manualTicketNumber = ref("");
 const validatingManual = ref(false);
+const rejectingMessage = ref(false);
 
 // Zoom e drag
 const canhotoZoom = ref(1);
@@ -272,6 +273,64 @@ async function manualValidateTicket() {
     });
   } finally {
     validatingManual.value = false;
+  }
+}
+
+async function confirmRejectMessage() {
+  if (!canhotoMessageId.value) return;
+
+  const result = await Swal.fire({
+    icon: "warning",
+    title: "Rejeitar Canhoto",
+    text: `Tem certeza que deseja rejeitar este canhoto? Esta ação não pode ser desfeita.`,
+    showCancelButton: true,
+    confirmButtonText: "Sim, rejeitar",
+    confirmButtonColor: "#dc3545",
+    cancelButtonText: "Cancelar",
+  });
+
+  if (result.isConfirmed) {
+    await rejectMessage();
+  }
+}
+
+async function rejectMessage() {
+  if (!canhotoMessageId.value) return;
+
+  rejectingMessage.value = true;
+
+  try {
+    const { data } = await api.post("/ticket-whatsapp-messages/reject", {
+      message_id: canhotoMessageId.value,
+    });
+
+    if (data?.success) {
+      await Swal.fire({
+        icon: "success",
+        title: "Sucesso",
+        text: "Canhoto rejeitado com sucesso!",
+      });
+
+      closeCanhotoModal();
+      reloadTable();
+      return;
+    }
+
+    await Swal.fire({
+      icon: "error",
+      title: "Erro",
+      text: data?.message || "Erro ao rejeitar o canhoto.",
+    });
+  } catch (error) {
+    const message = error?.response?.data?.message || "Erro ao rejeitar o canhoto.";
+
+    await Swal.fire({
+      icon: "error",
+      title: "Erro",
+      text: message,
+    });
+  } finally {
+    rejectingMessage.value = false;
   }
 }
 
@@ -584,6 +643,17 @@ function onTableClick(e) {
             <i v-if="!validatingManual" class="fas fa-check"></i>
             <i v-else class="fas fa-spinner fa-spin"></i>
             &nbsp;&nbsp;Validar
+          </button>
+          <button
+            v-if="isAdmin"
+            class="btn btn-danger mb-0"
+            type="button"
+            @click="confirmRejectMessage"
+            :disabled="rejectingMessage"
+          >
+            <i v-if="!rejectingMessage" class="fas fa-times"></i>
+            <i v-else class="fas fa-spinner fa-spin"></i>
+            &nbsp;&nbsp;Rejeitar
           </button>
           <button class="btn btn-outline-dark mb-0" type="button" @click="closeCanhotoModal">
             Fechar

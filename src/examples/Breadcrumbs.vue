@@ -38,7 +38,7 @@ defineProps({
           :class="isNavFixed ? 'text-dark' : 'text-white'"
           class="opacity-8"
           href="#"
-          >Início / São Sebastião</a
+          >Início</a
         >
       </li>
       <li

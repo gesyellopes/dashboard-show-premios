@@ -340,14 +340,14 @@ watch(
       <div class="vf-scope p-3">
         <Vueform ref="addRangeForm" :endpoint="false" @submit="handleAddRangeSubmit">
           <!-- Comunidade + Paróquia -->
-          <GroupElement name="container2_2">
+          <GroupElement name="container2_2" v-if="false">
             <GroupElement name="column1" :columns="{ container: 6 }">
               <SelectElement name="unit_id" :items="unitOptions" :search="true" :native="false" label="Comunidade"
-                input-type="search" autocomplete="off" :rules="['required']" />
+                input-type="search" autocomplete="off" />
             </GroupElement>
 
             <GroupElement name="column2" :columns="{ container: 6 }">
-              <TextElement name="group_name" label="Paróquia" :rules="['required']" />
+              <TextElement name="group_name" label="Paróquia" />
             </GroupElement>
           </GroupElement>
 

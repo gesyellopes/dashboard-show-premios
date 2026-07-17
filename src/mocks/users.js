@@ -64,6 +64,17 @@ export const MOCK_USERS = [
     department: "Operações",
     email: "gerente2@example.com",
     location: "Buritizeiro - MG"
+  },
+  {
+    id: 5,
+    phone: "38991001997",
+    password: "roni876",
+    name: "Roni Alecanstro",
+    role: "manager",
+    avatar: "https://ui-avatars.com/api/?name=Roni+Alecanstro&background=00B4D8&color=fff",
+    department: "Operações",
+    email: "gerente2@example.com",
+    location: "Buritizeiro - MG"
   }
 ];
 

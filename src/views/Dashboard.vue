@@ -32,6 +32,7 @@ const kpiValues = computed(() => ({
   verifiedPercent: kpis.value.verifiedPercent
 }));
 
+/*
 const salesTotals = computed(() => {
   const totalTickets = sales.value.reduce((sum, sale) => sum + sale.tickets, 0);
   const totalVerified = sales.value.reduce((sum, sale) => sum + sale.verified, 0);
@@ -40,26 +41,27 @@ const salesTotals = computed(() => {
 
   return { totalTickets, totalVerified, verifiedPercent, totalVendors };
 });
+*/
 
 const loadKpis = async () => {
   kpisLoading.value = true;
   try {
     const { data } = await api.get("/report/kpis");
 
-    if(data){
+    if (data) {
       Object.assign(kpis.value, data);
     }
 
     kpis.value.verifiedPercent = kpis.value.total_tickets
       ? (
-          (kpis.value.total_validated_tickets / kpis.value.total_tickets) *
-          100
-        ).toFixed(2)
+        (kpis.value.total_validated_tickets / kpis.value.total_tickets) *
+        100
+      ).toFixed(2)
       : "0.00";
 
-    kpis.value.total_fianncial = kpis.value.total_validated_tickets * 15;
+    kpis.value.total_fianncial = kpis.value.total_validated_tickets * 20;
 
-      console.log("Loaded KPIs:", kpis.value);
+    console.log("Loaded KPIs:", kpis.value);
   } catch (error) {
     console.error("Failed to load KPIs", error);
   } finally {
@@ -120,113 +122,45 @@ onMounted(() => {
     <div class="row">
       <div class="col-lg-12">
         <div class="row">
-          <div class="col-lg-3 col-md-6 col-12">
-            <mini-statistics-card title="Cartelas Cadastradas" :value="{ text: kpiValues.totalTickets }"
-              :loading="kpisLoading" description="" :icon="{
-              component: 'ni ni-money-coins',
-              background: 'bg-gradient-primary',
-              shape: 'rounded-circle',
-            }" />
-          </div>
-          <div class="col-lg-3 col-md-6 col-12">
-            <mini-statistics-card title="Cartelas Verificadas" :value="{ text: kpiValues.totalValidatedTickets + ' | ' + kpiValues.verifiedPercent + '%' }"
-              :loading="kpisLoading" description="" :icon="{
-              component: 'ni ni-check-bold',
-              background: 'bg-gradient-danger',
-              shape: 'rounded-circle',
-            }" />
-          </div>
-          <div class="col-lg-3 col-md-6 col-12">
-            <mini-statistics-card title="Vendedores Cadastrados" :value="{ text: kpiValues.totalVendors }"
-              :loading="kpisLoading" description="" :icon="{
-              component: 'ni ni-paper-diploma',
-              background: 'bg-gradient-success',
-              shape: 'rounded-circle',
-            }" />
-          </div>
-          <div class="col-lg-3 col-md-6 col-12">
-            <mini-statistics-card title="Arrecadado" :value="{ text: kpiValues.totalFinancial }" :loading="kpisLoading"
-              description="" :icon="{
-              component: 'ni ni-cart',
-              background: 'bg-gradient-warning',
-              shape: 'rounded-circle',
-            }" />
-          </div>
-        </div>
-        <div class="row">
           <div class="col-lg-6 mb-lg">
             <div class="card z-index-2">
               <gradient-line-chart id="chart-line" title="Resumo Validações" :chart="validationChart" />
             </div>
           </div>
           <div class="col-lg-6">
-            <div class="col-lg-12 mb-lg-0 mb-4">
-              <div class="card">
-                <div class="p-3 pb-0 card-header">
-                  <div class="d-flex justify-content-between">
-                    <h6 class="mb-2">Resumo por Comunidade</h6>
-                  </div>
-                </div>
-                <div class="table-responsive">
-                  <table class="table align-items-center">
-                    <tbody>
-                      <tr v-for="(sale, index) in sales" :key="index">
-                        <td class="w-30">
-                          <div class="px-2 py-1 d-flex align-items-center">
-                            <div class="ms-4">
-                              <p class="mb-0 text-xs font-weight-bold">
-                                Comunidade
-                              </p>
-                              <h6 class="mb-0 text-sm">{{ sale.unit }}</h6>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <div class="text-center">
-                            <p class="mb-0 text-xs font-weight-bold">Cartelas</p>
-                            <h6 class="mb-0 text-sm">{{ sale.tickets }}</h6>
-                          </div>
-                        </td>
-                        <td>
-                          <div class="text-center">
-                            <p class="mb-0 text-xs font-weight-bold">Verificadas</p>
-                            <h6 class="mb-0 text-sm">{{ sale.verified }} | {{ sale.verifiedPercent }}% </h6>
-                          </div>
-                        </td>
-                        <td class="text-sm align-middle">
-                          <div class="text-center col">
-                            <p class="mb-0 text-xs font-weight-bold">Vendedores</p>
-                            <h6 class="mb-0 text-sm">{{ sale.vendors }}</h6>
-                          </div>
-                        </td>
-                      </tr>
-                      <tr class="border-top fw-bold" style="background-color: rgba(0, 25, 70, 0.4);">
-                        <td class="w-30">
-                          <div class="px-2 py-1 d-flex align-items-center">
-                            <div class="ms-4">
-                              <h6 class="mb-0 text-sm">TOTAL</h6>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <div class="text-center">
-                            <h6 class="mb-0 text-sm">{{ salesTotals.totalTickets }}</h6>
-                          </div>
-                        </td>
-                        <td>
-                          <div class="text-center">
-                            <h6 class="mb-0 text-sm">{{ salesTotals.totalVerified }} | {{ salesTotals.verifiedPercent }}%</h6>
-                          </div>
-                        </td>
-                        <td class="text-sm align-middle">
-                          <div class="text-center col">
-                            <h6 class="mb-0 text-sm">{{ salesTotals.totalVendors }}</h6>
-                          </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
+            <div class="row">
+              <div class="col-lg-6 col-md-6 col-12">
+                <mini-statistics-card title="Cartelas Cadastradas" :value="{ text: kpiValues.totalTickets }"
+                  :loading="kpisLoading" description="" :icon="{
+                component: 'ni ni-money-coins',
+                background: 'bg-gradient-primary',
+                shape: 'rounded-circle',
+              }" />
+              </div>
+              <div class="col-lg-6 col-md-6 col-12">
+                <mini-statistics-card title="Cartelas Verificadas"
+                  :value="{ text: kpiValues.totalValidatedTickets + ' | ' + kpiValues.verifiedPercent + '%' }"
+                  :loading="kpisLoading" description="" :icon="{
+                component: 'ni ni-check-bold',
+                background: 'bg-gradient-danger',
+                shape: 'rounded-circle',
+              }" />
+              </div>
+              <div class="col-lg-6 col-md-6 col-12">
+                <mini-statistics-card title="Vendedores Cadastrados" :value="{ text: kpiValues.totalVendors }"
+                  :loading="kpisLoading" description="" :icon="{
+                component: 'ni ni-paper-diploma',
+                background: 'bg-gradient-success',
+                shape: 'rounded-circle',
+              }" />
+              </div>
+              <div class="col-lg-6 col-md-6 col-12">
+                <mini-statistics-card title="Arrecadado" :value="{ text: kpiValues.totalFinancial }"
+                  :loading="kpisLoading" description="" :icon="{
+                component: 'ni ni-cart',
+                background: 'bg-gradient-warning',
+                shape: 'rounded-circle',
+              }" />
               </div>
             </div>
           </div>

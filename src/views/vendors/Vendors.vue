@@ -114,12 +114,6 @@ const columns = [
         render: (data) => formatBrWhatsapp(data),
     },
     {
-        data: "unit",
-        title: "Comunidade",
-        name: "unit",
-        defaultContent: "-",
-    },
-    {
         data: "tickets_total",
         title: "Cartelas",
         name: "tickets_total",
@@ -130,12 +124,6 @@ const columns = [
         title: "Verificadas",
         name: "tickets_verified",
         defaultContent: "0",
-    },
-    {
-        data: "group",
-        title: "Paróquia",
-        name: "group",
-        defaultContent: "-",
     },
     {
         data: null,
@@ -369,7 +357,7 @@ onMounted(loadUnits);
                                                 :mask="('(00) 00000-0000')" />
                                         </GroupElement>
 
-                                        <GroupElement name="column3" :columns="{ container: 3 }">
+                                        <GroupElement v-if="false" name="column3" :columns="{ container: 3 }">
                                             <SelectElement name="unit_id_search" :items="unitOptions" :search="true"
                                                 :native="false" label="Comunidade" input-type="search"
                                                 autocomplete="off" @change="handleUnitFilterChange" />
@@ -378,7 +366,7 @@ onMounted(loadUnits);
                                         <GroupElement name="column4" :columns="{
                                     container: 3,
                                 }">
-                                            <SelectElement name="group_id_search" :items="groupOptions" :search="true"
+                                            <SelectElement v-if="false" name="group_id_search" :items="groupOptions" :search="true"
                                                 :native="false" label="Paróquia" input-type="search" autocomplete="off"
                                                 :disabled="groupLoading || groupOptions.length === 0" />
                                         </GroupElement>

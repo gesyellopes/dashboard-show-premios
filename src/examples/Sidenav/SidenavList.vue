@@ -27,7 +27,7 @@ const getRoute = () => {
         </sidenav-item>
       </li>
 
-      <li class="nav-item" v-if="userRole === 'admin'">
+      <li class="nav-item" v-if="false">
           <sidenav-item to="/sorteios" :class="getRoute() === 'sorteios' ? 'active' : ''"
             navText="Sorteios">
             <template v-slot:icon>
@@ -54,7 +54,7 @@ const getRoute = () => {
         </sidenav-item>
       </li>
 
-      <li class="nav-item">
+      <li class="nav-item" v-if="false">
         <sidenav-item to="/units" :class="getRoute() === 'units' ? 'active' : ''"
           navText="Comunidades">
           <template v-slot:icon>

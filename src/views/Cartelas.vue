@@ -246,21 +246,6 @@ const handleResetFilters = () => {
 // ===== Columns =====
 const columns = [
   { data: "ticketNumber", title: "Cartela", name: "ticketNumber" },
-
-  {
-    data: null,
-    title: "Paróquia",
-    name: "unit",
-    defaultContent: "-",
-    render: (_d, _t, row) => row?.unit?.name ?? "-",
-  },
-  {
-    data: null,
-    title: "Comunidade",
-    name: "group",
-    defaultContent: "-",
-    render: (_d, _t, row) => row?.group?.name ?? "-",
-  },
   {
     data: null,
     title: "Vendedor",
@@ -424,14 +409,14 @@ onMounted(loadUnits);
               <div class="col-3 tickets-filters">
                 <Vueform ref="filterForm" :endpoint="false" @submit="handleFilter">
                   <GroupElement name="container4">
-                    <GroupElement name="column1" :columns="{ container: 12 }">
+                    <GroupElement name="column1" :columns="{ container: 12 }" v-if="false">
                       <TextElement name="ticket_number" label="Cartela" />
 
-                      <SelectElement name="unit_id" :items="unitOptions" :search="true" :native="false"
+                      <SelectElement v-if="false" name="unit_id" :items="unitOptions" :search="true" :native="false"
                         label="Paróquia" input-type="search" autocomplete="off" @change="handleUnitFilterChange" />
 
                       <SelectElement name="group_id" :items="groupOptions" :search="true" :native="false"
-                        label="Comunidade" input-type="search" autocomplete="off"
+                        label="Distribuidor" input-type="search" autocomplete="off"
                         :disabled="groupLoading || groupOptions.length === 0" />
                     </GroupElement>
 

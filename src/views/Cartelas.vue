@@ -409,7 +409,7 @@ onMounted(loadUnits);
               <div class="col-3 tickets-filters">
                 <Vueform ref="filterForm" :endpoint="false" @submit="handleFilter">
                   <GroupElement name="container4">
-                    <GroupElement name="column1" :columns="{ container: 12 }" v-if="false">
+                    <GroupElement name="column1" :columns="{ container: 12 }">
                       <TextElement name="ticket_number" label="Cartela" />
 
                       <SelectElement v-if="false" name="unit_id" :items="unitOptions" :search="true" :native="false"

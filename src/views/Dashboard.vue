@@ -59,7 +59,7 @@ const loadKpis = async () => {
       ).toFixed(2)
       : "0.00";
 
-    kpis.value.total_fianncial = kpis.value.total_validated_tickets * 20;
+    kpis.value.total_fianncial = kpis.value.total_validated_tickets * 15;
 
     console.log("Loaded KPIs:", kpis.value);
   } catch (error) {

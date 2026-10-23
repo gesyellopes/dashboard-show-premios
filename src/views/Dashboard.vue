@@ -6,6 +6,8 @@ import api from "@/services/api";
 //import Carousel from "./components/Carousel.vue";
 //import CategoriesList from "./components/CategoriesList.vue";
 
+const TICKET_VALUE = Number(process.env.VUE_APP_TICKET_VALUE);
+
 const sales = ref([]);
 
 const validationReport = ref([]);
@@ -59,7 +61,7 @@ const loadKpis = async () => {
       ).toFixed(2)
       : "0.00";
 
-    kpis.value.total_fianncial = kpis.value.total_validated_tickets * 15;
+    kpis.value.total_fianncial = kpis.value.total_validated_tickets * TICKET_VALUE;
 
     console.log("Loaded KPIs:", kpis.value);
   } catch (error) {

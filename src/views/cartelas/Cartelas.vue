@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
 import { useStore } from "vuex";
 import DataTable from "datatables.net-vue3";
 import DataTablesCore from "datatables.net-bs5";
@@ -418,75 +418,34 @@ async function invalidateTicket() {
   }
 }
 
-// ===== Filters (Vueform) =====
-const filterForm = ref(null);
+// ===== Filters =====
+// `draft` é o que o usuário está digitando; `filters` é o que já foi aplicado na tabela
+const draft = ref({ ticket_number: "", group_id: null, vendor_name: "", vendor_whatsapp: "" });
 const filters = ref({});
 const statusFilter = ref(null); // 1 = validadas, 0 = não validadas, null = todas
+const lastApplied = ref("");
+let applyTimer = null;
 
-// options combos
-const unitOptions = ref([]);
+// a busca por texto só começa com 3 caracteres, para não pesar a consulta
+const MIN_SEARCH_CHARS = 3;
+
+// opções do distribuidor (o carregamento por paróquia foi removido junto com o select de paróquia oculto)
 const groupOptions = ref([]);
-const groupLoading = ref(false);
 
-// carrega comunidades
-const loadUnits = async () => {
-  try {
-    const { data } = await api.get("/units/list");
-    const units = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
-    unitOptions.value = units.map((u) => ({
-      value: u.id,
-      label: u.name,
-    }));
-  } catch (error) {
-    console.error("Failed to load units", error);
-  }
-};
+// valor normalizado (string/número ou null) — usado pelos chips e pela requisição
+const normalizeFilter = (raw) => (raw && typeof raw === "object" && "value" in raw ? raw.value : raw);
 
-// reseta combo de paróquia
-const resetGroupFilter = () => {
-  groupOptions.value = [];
-  const form = filterForm.value;
-  if (form?.el$) {
-    form.el$("group_id")?.update(null);
-  }
-};
-
-// mesma lógica do vendors: ao selecionar unidade, busca grupos
-const handleUnitFilterChange = async (value) => {
-  const unitId = value?.value ?? value;
-
-  if (!unitId) {
-    resetGroupFilter();
-    return;
-  }
-
-  groupLoading.value = true;
-  resetGroupFilter();
-
-  try {
-    const { data } = await api.get(`/groups/by-unit/${unitId}`);
-    const groups = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : [];
-    groupOptions.value = groups.map((g) => ({
-      value: g.id,
-      label: g.name,
-    }));
-  } catch (error) {
-    console.error("Failed to load groups by unit", error);
-  } finally {
-    groupLoading.value = false;
-  }
-};
-
-// filtros aplicados (chips + contador) — derivados do que foi submetido
+// filtros aplicados (chips + contador) — derivados do que já foi aplicado na tabela
 const activeChips = computed(() =>
   Object.keys(FILTER_LABELS).reduce((acc, key) => {
-    const raw = filters.value[key];
-    const value = raw && typeof raw === "object" && "value" in raw ? raw.value : raw;
+    const value = normalizeFilter(filters.value[key]);
     if (value === null || value === undefined || value === "" || value === false) return acc;
 
     let text = String(value);
     if (key === "group_id") {
       text = groupOptions.value.find((g) => g.value === value)?.label ?? text;
+    } else if (key === "vendor_whatsapp") {
+      text = formatPhoneInput(text);
     }
 
     acc.push({ key, label: FILTER_LABELS[key], text });
@@ -498,36 +457,86 @@ const activeFilterCount = computed(
   () => activeChips.value.length + (statusFilter.value !== null ? 1 : 0)
 );
 
-const handleFilter = (form$) => {
-  filters.value = { ...form$.requestData, validated: statusFilter.value };
-  setTableLoading(true);
-  reloadToFirstPage();
-};
+// quantos caracteres ainda faltam para a busca começar (vazio se já pode buscar)
+function missingChars(value) {
+  const length = value.length;
+  return length > 0 && length < MIN_SEARCH_CHARS ? MIN_SEARCH_CHARS - length : 0;
+}
 
-const handleResetFilters = () => {
-  statusFilter.value = null;
-  filters.value = {};
-  if (filterForm.value) filterForm.value.reset();
-  resetGroupFilter();
-  setTableLoading(true);
-  reloadToFirstPage();
-};
+const nameMissing = computed(() => missingChars(draft.value.vendor_name.trim()));
+const phoneMissing = computed(() => missingChars(draft.value.vendor_whatsapp));
 
-// clique nos botões de status: aplica na hora, sem precisar submeter o form
-function setStatus(value) {
-  if (statusFilter.value === value) return;
-  statusFilter.value = value;
-  filters.value = { ...filters.value, validated: value };
+function buildFilters() {
+  const name = draft.value.vendor_name.trim();
+  const phone = draft.value.vendor_whatsapp; // somente dígitos
+  return {
+    ticket_number: draft.value.ticket_number.trim() || null,
+    group_id: draft.value.group_id ?? null,
+    vendor_name: name.length >= MIN_SEARCH_CHARS ? name : null,
+    vendor_whatsapp: phone.length >= MIN_SEARCH_CHARS ? phone : null,
+    validated: statusFilter.value,
+  };
+}
+
+// aplica os filtros à tabela; ignora se nada mudou para não recarregar à toa
+function applyDraft() {
+  clearTimeout(applyTimer);
+  const next = buildFilters();
+  const serialized = JSON.stringify(next);
+  if (serialized === lastApplied.value) return;
+
+  lastApplied.value = serialized;
+  filters.value = next;
   setTableLoading(true);
   reloadToFirstPage();
 }
 
-// remove um chip: limpa o campo no form e reaplica
+// aplica enquanto digita, com um pequeno atraso para não disparar uma requisição por tecla
+function scheduleApply() {
+  clearTimeout(applyTimer);
+  applyTimer = setTimeout(applyDraft, 400);
+}
+
+watch(() => draft.value.ticket_number, scheduleApply);
+watch(() => draft.value.vendor_name, scheduleApply);
+watch(() => draft.value.vendor_whatsapp, scheduleApply);
+watch(() => draft.value.group_id, applyDraft);
+
+// formata o telefone enquanto digita: (00) 00000-0000
+function formatPhoneInput(digits) {
+  const d = digits.slice(0, 11);
+  if (d.length === 0) return "";
+  if (d.length <= 2) return `(${d}`;
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
+const phoneDisplay = computed(() => formatPhoneInput(draft.value.vendor_whatsapp));
+
+function onPhoneInput(e) {
+  const digits = e.target.value.replace(/\D/g, "").slice(0, 11);
+  draft.value.vendor_whatsapp = digits;
+  e.target.value = formatPhoneInput(digits);
+}
+
+const handleResetFilters = () => {
+  draft.value = { ticket_number: "", group_id: null, vendor_name: "", vendor_whatsapp: "" };
+  statusFilter.value = null;
+  applyDraft();
+};
+
+// clique nos botões de status: aplica na hora
+function setStatus(value) {
+  if (statusFilter.value === value) return;
+  statusFilter.value = value;
+  applyDraft();
+}
+
+// limpa um campo (botão × do input ou chip da toolbar)
 function removeChip(key) {
-  filterForm.value?.el$(key)?.update(null);
-  filters.value = { ...filters.value, [key]: null };
-  setTableLoading(true);
-  reloadToFirstPage();
+  draft.value[key] = key === "group_id" ? null : "";
+  applyDraft();
 }
 
 // ===== Columns =====
@@ -623,7 +632,7 @@ async function ajaxTickets(dtRequest, callback) {
     const params = Object.keys(rawFilters).reduce((acc, key) => {
       const value = rawFilters[key];
 
-      // Vueform SelectElement costuma mandar {value,label}
+      // selects podem mandar {value,label}
       const normalized =
         value && typeof value === "object" && "value" in value ? value.value : value;
 
@@ -698,7 +707,6 @@ function onTableClick(e) {
   openMirrorModal(rowData);
 }
 
-onMounted(loadUnits);
 </script>
 
 <template>
@@ -736,38 +744,90 @@ onMounted(loadUnits);
         <div class="card ct-filters-card" :class="{ 'is-collapsed': !filtersOpen }">
           <button type="button" class="ct-filters-head" :aria-expanded="filtersOpen"
             @click="filtersOpen = !filtersOpen">
-            <span><i class="fas fa-sliders me-2"></i>Filtros</span>
+            <span class="ct-filters-title">
+              <span class="ct-filters-title-icon"><i class="fas fa-sliders"></i></span>
+              Filtros
+              <span v-if="activeFilterCount" class="ct-filters-badge">{{ activeFilterCount }}</span>
+            </span>
             <i class="fas fa-chevron-down ct-chevron"></i>
           </button>
 
           <div class="ct-filters-body">
-            <Vueform ref="filterForm" :endpoint="false" @submit="handleFilter">
-              <GroupElement name="container4">
-                <GroupElement name="column1" :columns="{ container: 12 }">
-                  <TextElement name="ticket_number" label="Cartela" />
+            <!-- Cartela -->
+            <div class="ct-field">
+              <label class="ct-field-label" for="ctTicketNumber">Cartela</label>
+              <div class="ct-input-wrap" :class="{ 'has-value': draft.ticket_number }">
+                <i class="fas fa-ticket ct-input-icon"></i>
+                <input id="ctTicketNumber" v-model="draft.ticket_number" type="text" class="ct-input-field"
+                  placeholder="Ex.: 1234" autocomplete="off" @keydown.enter.prevent="applyDraft" />
+                <button v-if="draft.ticket_number" type="button" class="ct-input-clear" aria-label="Limpar cartela"
+                  @click="removeChip('ticket_number')">
+                  <i class="fas fa-xmark"></i>
+                </button>
+              </div>
+            </div>
 
-                  <SelectElement v-if="false" name="unit_id" :items="unitOptions" :search="true" :native="false"
-                    label="Paróquia" input-type="search" autocomplete="off" @change="handleUnitFilterChange" />
+            <!-- Distribuidor -->
+            <div class="ct-field">
+              <label class="ct-field-label" for="ctGroup">Distribuidor</label>
+              <div class="ct-input-wrap" :class="{ 'has-value': draft.group_id !== null }">
+                <i class="fas fa-building ct-input-icon"></i>
+                <select id="ctGroup" v-model="draft.group_id" class="ct-input-field ct-input-select"
+                  :disabled="groupOptions.length === 0">
+                  <option :value="null">Todos</option>
+                  <option v-for="g in groupOptions" :key="g.value" :value="g.value">{{ g.label }}</option>
+                </select>
+                <button v-if="draft.group_id !== null" type="button" class="ct-input-clear"
+                  aria-label="Limpar distribuidor" @click="removeChip('group_id')">
+                  <i class="fas fa-xmark"></i>
+                </button>
+              </div>
+            </div>
 
-                  <SelectElement name="group_id" :items="groupOptions" :search="true" :native="false"
-                    label="Distribuidor" input-type="search" autocomplete="off"
-                    :disabled="groupLoading || groupOptions.length === 0" />
-                </GroupElement>
+            <!-- Vendedor -->
+            <div class="ct-section-title"><i class="fas fa-user-tie me-1"></i> Vendedor</div>
 
-                <GroupElement name="column4" :columns="{ container: 12 }">
-                  <StaticElement name="vendor_title" tag="div"
-                    content="<div class='ct-section-title'><i class='fas fa-user-tie me-1'></i> Vendedor</div>" />
-                  <TextElement name="vendor_name" label="Nome" />
-                  <TextElement name="vendor_whatsapp" label="WhatsApp" />
-                </GroupElement>
+            <!-- Nome -->
+            <div class="ct-field">
+              <label class="ct-field-label" for="ctVendorName">Nome</label>
+              <div class="ct-input-wrap" :class="{ 'has-value': draft.vendor_name }">
+                <i class="fas fa-user ct-input-icon"></i>
+                <input id="ctVendorName" v-model="draft.vendor_name" type="text" class="ct-input-field"
+                  placeholder="Ex.: Maria Silva" autocomplete="off" @keydown.enter.prevent="applyDraft" />
+                <button v-if="draft.vendor_name" type="button" class="ct-input-clear" aria-label="Limpar nome"
+                  @click="removeChip('vendor_name')">
+                  <i class="fas fa-xmark"></i>
+                </button>
+              </div>
+              <small v-if="nameMissing" class="ct-field-hint">
+                Digite mais {{ nameMissing }} {{ nameMissing === 1 ? "caractere" : "caracteres" }} para pesquisar
+              </small>
+            </div>
 
-                <GroupElement name="column4_2" :columns="{ container: 12 }">
-                  <ButtonElement name="submit" button-label="Filtrar" :submits="true" :columns="{ container: 6 }" />
-                  <ButtonElement name="reset" button-label="Limpar" :secondary="true" :submits="false"
-                    :columns="{ container: 6 }" @click="handleResetFilters" />
-                </GroupElement>
-              </GroupElement>
-            </Vueform>
+            <!-- WhatsApp -->
+            <div class="ct-field">
+              <label class="ct-field-label" for="ctVendorPhone">WhatsApp</label>
+              <div class="ct-input-wrap" :class="{ 'has-value': draft.vendor_whatsapp }">
+                <i class="fas fa-phone ct-input-icon"></i>
+                <input id="ctVendorPhone" :value="phoneDisplay" type="text" inputmode="tel"
+                  class="ct-input-field" placeholder="(00) 00000-0000" autocomplete="off"
+                  @input="onPhoneInput" @keydown.enter.prevent="applyDraft" />
+                <button v-if="draft.vendor_whatsapp" type="button" class="ct-input-clear"
+                  aria-label="Limpar WhatsApp" @click="removeChip('vendor_whatsapp')">
+                  <i class="fas fa-xmark"></i>
+                </button>
+              </div>
+              <small v-if="phoneMissing" class="ct-field-hint">
+                Digite mais {{ phoneMissing }} {{ phoneMissing === 1 ? "dígito" : "dígitos" }} para pesquisar
+              </small>
+            </div>
+
+            <div class="ct-filters-foot">
+              <span class="ct-filters-status"><i class="fas fa-bolt me-1"></i>Atualiza enquanto você digita</span>
+              <button type="button" class="ct-clear-filters" :disabled="!activeFilterCount" @click="handleResetFilters">
+                <i class="fas fa-eraser me-1"></i>Limpar
+              </button>
+            </div>
           </div>
         </div>
       </aside>
@@ -915,6 +975,7 @@ onMounted(loadUnits);
   --ct-primary: #5e72e4;
   --ct-primary-2: #825ee4;
   --ct-success: #2dce89;
+  --ct-danger: #f5365c;
   --ct-text: #f1f3f9;
   --ct-muted: rgba(255, 255, 255, 0.55);
   --ct-border: rgba(255, 255, 255, 0.08);
@@ -1036,18 +1097,46 @@ onMounted(loadUnits);
   position: sticky;
   top: 90px;
   overflow: hidden;
+  border: 1px solid var(--ct-border);
 }
 .ct-page .ct-filters-head {
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem 1.25rem;
+  padding: 0.9rem 1.1rem;
   border: 0;
-  background: transparent;
+  background: linear-gradient(135deg, rgba(94, 114, 228, 0.3), rgba(130, 94, 228, 0.18));
   font-weight: 700;
   color: var(--ct-text);
   text-align: left;
+}
+.ct-page .ct-filters-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.ct-page .ct-filters-title-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  color: #fff;
+  background: linear-gradient(135deg, var(--ct-primary), var(--ct-primary-2));
+}
+.ct-page .ct-filters-badge {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  font-size: 0.72rem;
+  color: var(--ct-primary);
+  background: #fff;
+  animation: ct-pop 0.25s ease;
 }
 .ct-page .ct-chevron {
   color: var(--ct-muted);
@@ -1057,18 +1146,132 @@ onMounted(loadUnits);
   transform: rotate(-180deg);
 }
 .ct-page .ct-filters-body {
-  padding: 0 1.25rem 1.25rem;
+  padding: 1rem 1.1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
 }
 .ct-page .ct-filters-card.is-collapsed .ct-filters-body {
   display: none;
 }
 .ct-page .ct-section-title {
-  margin: 0.5rem 0 0.25rem;
+  margin: 0.2rem 0 -0.4rem;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--ct-muted);
+}
+
+/* Campos */
+.ct-page .ct-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.ct-page .ct-field-label {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ct-muted);
+}
+.ct-page .ct-field-hint {
+  font-size: 0.72rem;
+  color: var(--ct-muted);
+}
+.ct-page .ct-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.6rem 0.5rem 0.8rem;
+  border: 1px solid var(--ct-border);
+  border-radius: 0.85rem;
+  background: var(--ct-surface);
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+.ct-page .ct-input-wrap:focus-within {
+  border-color: var(--ct-primary);
+  box-shadow: 0 0 0 3px rgba(94, 114, 228, 0.25);
+  background: rgba(94, 114, 228, 0.06);
+}
+.ct-page .ct-input-icon {
+  width: 14px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--ct-muted);
+  transition: color 0.2s;
+}
+.ct-page .ct-input-wrap.has-value .ct-input-icon,
+.ct-page .ct-input-wrap:focus-within .ct-input-icon {
+  color: var(--ct-primary);
+}
+.ct-page .ct-input-field {
+  flex: 1;
+  min-width: 0;
+  padding: 0.2rem 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ct-text);
+  font-size: 0.92rem;
+}
+.ct-page .ct-input-field::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+.ct-page .ct-input-field:disabled {
+  opacity: 0.5;
+}
+.ct-page .ct-input-select {
+  color-scheme: dark;
+  cursor: pointer;
+}
+.ct-page .ct-input-clear {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 50%;
+  font-size: 0.6rem;
+  color: var(--ct-muted);
+  background: var(--ct-surface-2);
+  display: grid;
+  place-items: center;
+  transition: background 0.2s, color 0.2s;
+}
+.ct-page .ct-input-clear:hover {
+  color: #fff;
+  background: var(--ct-danger);
+}
+
+/* Rodapé do painel */
+.ct-page .ct-filters-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+  padding-top: 0.8rem;
+  border-top: 1px dashed var(--ct-border);
+}
+.ct-page .ct-filters-status {
+  font-size: 0.75rem;
+  color: var(--ct-muted);
+}
+.ct-page .ct-filters-status i {
+  color: #fbbf24;
+}
+.ct-page .ct-clear-filters {
+  border: 0;
+  background: transparent;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ct-danger);
+  transition: opacity 0.2s;
+}
+.ct-page .ct-clear-filters:disabled {
+  opacity: 0.35;
 }
 
 /* Desktop: filtros sempre visíveis e fixos ao rolar */
@@ -1081,7 +1284,7 @@ onMounted(loadUnits);
   }
   .ct-page .ct-filters-body,
   .ct-page .ct-filters-card.is-collapsed .ct-filters-body {
-    display: block;
+    display: flex;
   }
 }
 

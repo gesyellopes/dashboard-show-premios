@@ -111,6 +111,12 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: "/sistema",
+    name: "Sistema",
+    component: () => import("@/views/sistema/SistemaDashboard.vue"),
+    meta: { requiresAuth: true, adminOnly: true }
+  },
+  {
     path: "/sorteios",
     name: "Sorteios",
     component: () => import("../views/sorteio/List.vue"),

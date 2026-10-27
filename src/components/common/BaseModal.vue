@@ -8,6 +8,7 @@ const props = defineProps({
   centered: { type: Boolean, default: true },
   contentClass: { type: String, default: "bg-default" },
   closeOnBackdrop: { type: Boolean, default: true },
+  hideFooter: { type: Boolean, default: false }, // esconde a barra de rodapé (ações ficam no corpo)
 });
 
 const emit = defineEmits(["update:modelValue", "close"]);
@@ -67,7 +68,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
             <slot />
           </div>
 
-          <div class="modal-footer">
+          <div v-if="!hideFooter" class="modal-footer">
             <slot name="footer">
               <button class="btn btn-outline-dark mb-0" type="button" @click="close">
                 Fechar

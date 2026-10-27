@@ -14,7 +14,6 @@ const currentSection = computed(() => route.path.split("/")[1]);
 
 const menuItems = [
   { to: "/dashboard", label: "Dashboard", section: "dashboard" },
-  { to: "/sorteios", label: "Sorteios", section: "sorteios", adminOnly: true },
   { to: "/tickets", label: "Cartelas", section: "tickets" },
   { to: "/canhotos", label: "Canhotos", section: "canhotos", adminOnly: true },
   { to: "/vendors", label: "Vendedores", section: "vendors" },
@@ -22,7 +21,19 @@ const menuItems = [
 
 const visibleItems = computed(() => menuItems.filter((item) => !item.adminOnly || isAdmin.value));
 
-// Menu de Configurações (mockado: subitens ainda não possuem rotas)
+// Itens raiz da seção "Sistema". Os que têm `to` são links reais; os demais são mockados ("Em breve")
+const systemItems = [
+  { to: "/sistema", label: "Dashboard", section: "sistema", adminOnly: true },
+  { to: "/sorteios", label: "Sorteios", section: "sorteios", adminOnly: true },
+  { label: "Eventos" },
+  { label: "Clientes" },
+];
+
+const visibleSystemItems = computed(() =>
+  systemItems.filter((item) => !item.adminOnly || isAdmin.value)
+);
+
+// Subitens de Configurações (mockados: ainda não possuem rotas)
 const settingsOpen = ref(false);
 const settingsChildren = ["WhatsApp", "Mensagens", "Configurações"];
 
@@ -35,7 +46,7 @@ const closeOnSmallScreen = () => {
 <template>
   <div class="collapse navbar-collapse w-auto h-100 sn-wrapper" id="sidenav-collapse-main">
     <nav class="sn-menu">
-      <p class="sn-label">Menu</p>
+      <p class="sn-label">Evento</p>
       <ul class="sn-list">
         <li v-for="item in visibleItems" :key="item.to">
           <router-link
@@ -51,6 +62,20 @@ const closeOnSmallScreen = () => {
 
       <p class="sn-label">Sistema</p>
       <ul class="sn-list">
+        <li v-for="item in visibleSystemItems" :key="item.label">
+          <router-link
+            v-if="item.to"
+            :to="item.to"
+            class="sn-link"
+            :class="{ 'is-active': currentSection === item.section }"
+            @click="closeOnSmallScreen"
+          >
+            {{ item.label }}
+          </router-link>
+          <button v-else type="button" class="sn-link" title="Em breve">
+            <span>{{ item.label }}</span>
+          </button>
+        </li>
         <li>
           <button
             type="button"

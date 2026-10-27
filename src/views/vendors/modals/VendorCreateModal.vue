@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch } from "vue";
-import BaseModal from "../../components/BaseModal.vue";
+import BaseModal from "@/components/common/BaseModal.vue";
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false }, // v-model do pai

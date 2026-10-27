@@ -3,8 +3,8 @@ import { ref, onBeforeUnmount, onBeforeMount } from "vue";
 import { useStore } from "vuex";
 import { useRouter } from "vue-router";
 
-import ArgonInput from "@/components/ArgonInput.vue";
-import ArgonButton from "@/components/ArgonButton.vue";
+import ArgonInput from "@/components/common/ArgonInput.vue";
+import ArgonButton from "@/components/common/ArgonButton.vue";
 
 import { authService } from "@/services/authService";
 

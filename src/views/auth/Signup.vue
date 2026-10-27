@@ -4,9 +4,9 @@ import { useStore } from "vuex";
 
 import Navbar from "@/examples/PageLayout/Navbar.vue";
 import AppFooter from "@/examples/PageLayout/Footer.vue";
-import ArgonInput from "@/components/ArgonInput.vue";
-import ArgonCheckbox from "@/components/ArgonCheckbox.vue";
-import ArgonButton from "@/components/ArgonButton.vue";
+import ArgonInput from "@/components/common/ArgonInput.vue";
+import ArgonCheckbox from "@/components/common/ArgonCheckbox.vue";
+import ArgonButton from "@/components/common/ArgonButton.vue";
 const body = document.getElementsByTagName("body")[0];
 
 const store = useStore();

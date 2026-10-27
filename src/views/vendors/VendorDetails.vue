@@ -4,8 +4,8 @@ import { useStore } from "vuex";
 
 import setNavPills from "@/assets/js/nav-pills.js";
 import setTooltip from "@/assets/js/tooltip.js";
-import ArgonInput from "@/components/ArgonInput.vue";
-import ArgonButton from "@/components/ArgonButton.vue";
+import ArgonInput from "@/components/common/ArgonInput.vue";
+import ArgonButton from "@/components/common/ArgonButton.vue";
 
 const body = document.getElementsByTagName("body")[0];
 

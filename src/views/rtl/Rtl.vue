@@ -2,13 +2,13 @@
 import { onBeforeMount, onBeforeUnmount } from "vue";
 import { useStore } from "vuex";
 import MiniStatisticsCard from "@/examples/Cards/MiniStatisticsCard.vue";
-import DeveloperCard from "./components/DeveloperCard.vue";
-import RocketCard from "./components/RocketCard.vue";
+import DeveloperCard from "@/views/components/DeveloperCard.vue";
+import RocketCard from "@/views/components/RocketCard.vue";
 import ActiveUsersChart from "@/examples/Charts/ActiveUsersChart.vue";
 import GradientLineChart from "@/examples/Charts/GradientLineChart.vue";
 import TimelineList from "@/examples/Cards/TimelineList.vue";
 import TimelineItem from "@/examples/Cards/TimelineItem.vue";
-import ProjectCard from "./components/ProjectCard.vue";
+import ProjectCard from "@/views/components/ProjectCard.vue";
 
 import logoXD from "@/assets/img/small-logos/logo-xd.svg";
 import logoAtlassian from "@/assets/img/small-logos/logo-atlassian.svg";

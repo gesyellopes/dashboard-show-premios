@@ -2,7 +2,7 @@
 import { computed, onBeforeMount, onBeforeUnmount, onMounted } from "vue";
 import { useStore } from "vuex";
 import { useRouter } from "vue-router";
-import ArgonButton from "@/components/ArgonButton.vue";
+import ArgonButton from "@/components/common/ArgonButton.vue";
 import { ROLE_PERMISSIONS } from "@/mocks/users";
 
 const store = useStore();

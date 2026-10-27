@@ -5,7 +5,7 @@ import DataTablesCore from "datatables.net-bs5";
 import "datatables.net-bs5/css/dataTables.bootstrap5.min.css";
 
 import api from "@/services/api";
-import BaseModal from "@/views/components/BaseModal.vue"; // ajuste se seu path for outro
+import BaseModal from "@/components/common/BaseModal.vue"; // ajuste se seu path for outro
 
 DataTable.use(DataTablesCore);
 

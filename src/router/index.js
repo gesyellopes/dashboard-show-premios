@@ -1,17 +1,17 @@
 import { createRouter, createWebHistory } from "vue-router";
-import Dashboard from "../views/Dashboard.vue";
+import Dashboard from "@/views/dashboard/Dashboard.vue";
 import Tables from "../views/Tables.vue";
-import Billing from "../views/Billing.vue";
-import VirtualReality from "../views/VirtualReality.vue";
-import RTL from "../views/Rtl.vue";
-import Profile from "../views/Profile.vue";
-import Signup from "../views/Signup.vue";
-import Signin from "../views/Signin.vue";
-import MyAccount from "../views/MyAccount.vue";
+import Billing from "@/views/billing/Billing.vue";
+import VirtualReality from "@/views/virtual-reality/VirtualReality.vue";
+import RTL from "@/views/rtl/Rtl.vue";
+import Profile from "@/views/profile/Profile.vue";
+import Signup from "@/views/auth/Signup.vue";
+import Signin from "@/views/auth/Signin.vue";
+import MyAccount from "@/views/my-account/MyAccount.vue";
 
 //Componentes
-import Tickets from "../views/Cartelas.vue";
-import Canhotos from "../views/Canhotos.vue";
+import Tickets from "@/views/cartelas/Cartelas.vue";
+import Canhotos from "@/views/canhotos/Canhotos.vue";
 import Vendors from "../views/vendors/Vendors.vue";
 import VendorDetails from "../views/vendors/VendorDetails.vue";
 
@@ -107,7 +107,7 @@ const routes = [
   {
     path: "/units",
     name: "Comunidades",
-    component: () => import("../views/Comunidades.vue"),
+    component: () => import("@/views/comunidades/Comunidades.vue"),
     meta: { requiresAuth: true }
   },
   {

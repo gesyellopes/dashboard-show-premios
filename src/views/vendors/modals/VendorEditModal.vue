@@ -5,7 +5,7 @@ import DataTablesCore from "datatables.net-bs5";
 import "datatables.net-bs5/css/dataTables.bootstrap5.min.css";
 import Swal from "sweetalert2";
 
-import BaseModal from "../../components/BaseModal.vue";
+import BaseModal from "@/components/common/BaseModal.vue";
 import api from "@/services/api";
 
 DataTable.use(DataTablesCore);
